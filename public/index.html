@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReportaGT - Reportar un problema</title>
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<header></header>
+<main>
+  <form id="form" class="tarjeta" novalidate>
+    <h2>Reporta un problema de tu calle</h2>
+    <p class="ayuda">Tu reporte llegará por correo a la Municipalidad de Villa Canales con tu ubicación y foto.</p>
+
+    <label for="categoria">Categoría</label>
+    <select id="categoria" name="categoria" required></select>
+
+    <label for="descripcion">Descripción corta</label>
+    <textarea id="descripcion" name="descripcion" rows="3" maxlength="500" required placeholder="Ej: bache grande que daña los carros"></textarea>
+
+    <div class="dos">
+      <div><label for="nombre">Tu nombre</label><input id="nombre" name="nombre" maxlength="80" required></div>
+      <div><label for="email">Tu correo</label><input id="email" name="email" type="email" maxlength="120" required></div>
+    </div>
+
+    <div class="dos">
+      <div><label for="direccion">Dirección de referencia</label>
+        <input id="direccion" name="direccion" maxlength="200" required placeholder="Ej: frente a la tienda X"></div>
+      <div><label for="sector">Sector</label><select id="sector" name="sector" required></select></div>
+    </div>
+
+    <label for="foto">Foto (opcional, máx. 5 MB)</label>
+    <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp">
+
+    <label>Ubicación: haz clic en el mapa para marcar el punto</label>
+    <div id="mapa"></div>
+    <p class="ayuda" id="coords">Aún no marcaste un punto.</p>
+    <input type="hidden" name="lat" id="lat"><input type="hidden" name="lng" id="lng">
+
+    <div id="msg" class="msg"></div>
+    <button type="submit" id="enviar">Enviar reporte</button>
+  </form>
+</main>
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="/common.js"></script>
+<script>
+pintarNav('index.html');
+
+// Llenar los selects con la configuración del servidor
+fetch('/api/config').then(r => r.json()).then(c => {
+  document.getElementById('categoria').innerHTML = '<option value="">Elige...</option>' + c.categorias.map(x => `<option>${esc(x)}</option>`).join('');
+  document.getElementById('sector').innerHTML = '<option value="">Elige...</option>' + c.sectores.map(x => `<option>${esc(x)}</option>`).join('');
+});
+
+// Mapa con un solo marcador que se mueve con cada clic
+const mapa = crearMapa('mapa');
+let marcador = null;
+mapa.on('click', (e) => {
+  const { lat, lng } = e.latlng;
+  if (marcador) marcador.setLatLng(e.latlng); else marcador = L.marker(e.latlng).addTo(mapa);
+  document.getElementById('lat').value = lat.toFixed(6);
+  document.getElementById('lng').value = lng.toFixed(6);
+  document.getElementById('coords').textContent = `Punto marcado: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+});
+
+const msg = document.getElementById('msg');
+const mostrar = (clase, html) => { msg.className = 'msg ' + clase; msg.innerHTML = html; };
+
+document.getElementById('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const boton = document.getElementById('enviar');
+  boton.disabled = true; boton.textContent = 'Enviando...';
+  try {
+    const r = await fetch('/api/reportes', { method: 'POST', body: new FormData(ev.target) });
+    const datos = await r.json();
+    if (!datos.ok) { mostrar('error', datos.errores.map(esc).join('<br>')); return; }
+    // Reporte guardado; si algún correo falló, se avisa pero el reporte existe
+    mostrar(datos.avisos.length ? 'aviso' : 'ok',
+      `<b>¡Reporte enviado! Tu número de seguimiento es ${esc(datos.numero)}.</b>` +
+      (datos.avisos.length ? '<br>Atención: ' + datos.avisos.map(esc).join(' ') + ' Tu reporte sí quedó guardado.' : '<br>Te enviamos una confirmación por correo.'));
+    ev.target.reset();
+    if (marcador) { marcador.remove(); marcador = null; }
+    document.getElementById('coords').textContent = 'Aún no marcaste un punto.';
+    msg.scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    mostrar('error', 'No se pudo conectar con el servidor. Intenta de nuevo.');
+  } finally {
+    boton.disabled = false; boton.textContent = 'Enviar reporte';
+  }
+});
+</script>
+</body></html>

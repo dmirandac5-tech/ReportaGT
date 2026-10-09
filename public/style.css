@@ -1,0 +1,34 @@
+/* Estilos simples de ReportaGT */
+:root { --azul: #0b5ea8; --gris: #f3f5f7; --borde: #d8dde2; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--gris); color: #222; }
+header { background: var(--azul); color: #fff; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+header h1 { margin: 0; font-size: 20px; }
+header small { opacity: .85; display: block; font-weight: normal; font-size: 12px; }
+nav a { color: #fff; text-decoration: none; margin-right: 14px; padding: 4px 0; border-bottom: 2px solid transparent; }
+nav a.activo, nav a:hover { border-bottom-color: #fff; }
+main { max-width: 1000px; margin: 20px auto; padding: 0 14px; }
+.tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 18px; margin-bottom: 18px; }
+h2 { margin-top: 0; font-size: 18px; }
+label { display: block; font-weight: bold; margin: 12px 0 4px; font-size: 14px; }
+input, select, textarea { width: 100%; padding: 9px; border: 1px solid var(--borde); border-radius: 5px; font: inherit; }
+.dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .dos { grid-template-columns: 1fr; } }
+button, .boton { background: var(--azul); color: #fff; border: 0; padding: 10px 18px; border-radius: 5px; font: inherit; cursor: pointer; }
+button:disabled { opacity: .6; cursor: wait; }
+button.sec { background: #fff; color: var(--azul); border: 1px solid var(--azul); padding: 5px 10px; font-size: 13px; }
+#mapa, #mapa-reportes { height: 380px; border-radius: 6px; border: 1px solid var(--borde); }
+.ayuda { font-size: 13px; color: #666; margin: 4px 0; }
+.msg { padding: 12px; border-radius: 6px; margin: 12px 0; display: none; }
+.msg.ok { background: #e3f6e8; border: 1px solid #8fd19e; display: block; }
+.msg.error { background: #fde8e8; border: 1px solid #f0a0a0; display: block; }
+.msg.aviso { background: #fff4d6; border: 1px solid #f0cf72; display: block; }
+.estado { padding: 2px 9px; border-radius: 10px; font-size: 12px; color: #fff; white-space: nowrap; }
+.estado.pendiente { background: #c0392b; } .estado.en-proceso { background: #d68910; } .estado.resuelto { background: #229954; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+td.calor { text-align: center; font-weight: bold; }
+.pin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 3px #000; }
+.leyenda span { margin-right: 14px; font-size: 13px; white-space: nowrap; }
+.leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.miniatura { max-width: 160px; border-radius: 4px; margin-top: 6px; display: block; }

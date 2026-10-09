@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReportaGT - Reportes</title>
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<header></header>
+<main>
+  <div class="tarjeta">
+    <h2>Mapa de reportes</h2>
+    <div class="leyenda" id="leyenda"></div>
+    <div id="mapa-reportes"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>¿Dónde reparar primero?</h2>
+    <p class="ayuda">Reportes sin resolver por sector y categoría. Mientras más oscuro el rojo, más urgente es la zona.</p>
+    <div id="resumen"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Todos los reportes</h2>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>N.º</th><th>Categoría</th><th>Descripción</th><th>Ubicación</th><th>Fecha</th><th>Estado</th></tr></thead>
+      <tbody id="lista"></tbody>
+    </table></div>
+  </div>
+</main>
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="/common.js"></script>
+<script>
+pintarNav('reportes.html');
+
+document.getElementById('leyenda').innerHTML = Object.entries(COLORES)
+  .map(([c, col]) => `<span><i style="background:${col}"></i>${esc(c)}</span>`).join('');
+
+const mapa = crearMapa('mapa-reportes');
+
+async function cargar() {
+  const [reportes, resumen] = await Promise.all([
+    fetch('/api/reportes').then(r => r.json()),
+    fetch('/api/resumen').then(r => r.json()),
+  ]);
+
+  // Pines en el mapa
+  reportes.forEach(r => {
+    L.marker([r.lat, r.lng], { icon: iconoPin(r.categoria) }).addTo(mapa).bindPopup(
+      `<b>${esc(r.numero)} - ${esc(r.categoria)}</b><br>${esc(r.descripcion)}<br><i>${esc(r.direccion)}</i><br>` +
+      `<span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span>` +
+      (r.foto ? `<img class="miniatura" src="${esc(r.foto)}" alt="foto">` : ''));
+  });
+  if (reportes.length) mapa.fitBounds(reportes.map(r => [r.lat, r.lng]), { padding: [30, 30], maxZoom: 16 });
+
+  // Tabla de calor sector x categoría
+  const cats = Object.keys(COLORES);
+  const sectores = [...new Set(resumen.porSector.map(x => x.sector))].sort();
+  const cuenta = (s, c) => (resumen.porSector.find(x => x.sector === s && x.categoria === c) || {}).total || 0;
+  const maximo = Math.max(1, ...resumen.porSector.map(x => x.total));
+  document.getElementById('resumen').innerHTML = sectores.length ?
+    `<div style="overflow-x:auto"><table><thead><tr><th>Sector</th>${cats.map(c => `<th>${esc(c)}</th>`).join('')}<th>Total</th></tr></thead><tbody>` +
+    sectores.map(s => {
+      const total = cats.reduce((a, c) => a + cuenta(s, c), 0);
+      return `<tr><td><b>${esc(s)}</b></td>` + cats.map(c => {
+        const n = cuenta(s, c);
+        // La opacidad del rojo crece con la cantidad
+        return `<td class="calor" style="background:rgba(192,57,43,${n ? 0.15 + 0.7 * n / maximo : 0})">${n || ''}</td>`;
+      }).join('') + `<td class="calor">${total}</td></tr>`;
+    }).join('') + '</tbody></table></div>'
+    : '<p>No hay reportes pendientes.</p>';
+
+  // Lista
+  document.getElementById('lista').innerHTML = reportes.map(r => `<tr>
+    <td><b>${esc(r.numero)}</b></td><td>${esc(r.categoria)}</td><td>${esc(r.descripcion)}</td>
+    <td>${esc(r.direccion)}<br><small>${esc(r.sector)}</small></td><td>${fechaCorta(r.creado_en)}</td>
+    <td><span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span></td></tr>`).join('');
+}
+cargar();
+</script>
+</body></html>
