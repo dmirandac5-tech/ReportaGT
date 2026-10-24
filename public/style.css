@@ -1,12 +1,12 @@
 /* Estilos simples de ReportaGT */
-:root { --azul: #0b5ea8; --gris: #f3f5f7; --borde: #d8dde2; }
+:root { --verde: #128c7e; --verde-claro: #25d366; --verde-texto: #06362d; --gris: #eefaf2; --borde: #cdebd9; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--gris); color: #222; }
-header { background: var(--azul); color: #fff; padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+header { background: var(--verde-claro); color: var(--verde-texto); padding: 12px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 header h1 { margin: 0; font-size: 20px; }
 header small { opacity: .85; display: block; font-weight: normal; font-size: 12px; }
-nav a { color: #fff; text-decoration: none; margin-right: 14px; padding: 4px 0; border-bottom: 2px solid transparent; }
-nav a.activo, nav a:hover { border-bottom-color: #fff; }
+nav a { color: var(--verde-texto); text-decoration: none; margin-right: 14px; padding: 4px 0; border-bottom: 2px solid transparent; }
+nav a.activo, nav a:hover { border-bottom-color: var(--verde-texto); }
 main { max-width: 1000px; margin: 20px auto; padding: 0 14px; }
 .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 18px; margin-bottom: 18px; }
 h2 { margin-top: 0; font-size: 18px; }
@@ -14,9 +14,9 @@ label { display: block; font-weight: bold; margin: 12px 0 4px; font-size: 14px; 
 input, select, textarea { width: 100%; padding: 9px; border: 1px solid var(--borde); border-radius: 5px; font: inherit; }
 .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 640px) { .dos { grid-template-columns: 1fr; } }
-button, .boton { background: var(--azul); color: #fff; border: 0; padding: 10px 18px; border-radius: 5px; font: inherit; cursor: pointer; }
+button, .boton { background: var(--verde); color: #fff; border: 0; padding: 10px 18px; border-radius: 5px; font: inherit; cursor: pointer; }
 button:disabled { opacity: .6; cursor: wait; }
-button.sec { background: #fff; color: var(--azul); border: 1px solid var(--azul); padding: 5px 10px; font-size: 13px; }
+button.sec { background: #fff; color: var(--verde); border: 1px solid var(--verde); padding: 5px 10px; font-size: 13px; }
 #mapa, #mapa-reportes { height: 380px; border-radius: 6px; border: 1px solid var(--borde); }
 .ayuda { font-size: 13px; color: #666; margin: 4px 0; }
 .msg { padding: 12px; border-radius: 6px; margin: 12px 0; display: none; }
@@ -32,3 +32,4 @@ td.calor { text-align: center; font-weight: bold; }
 .leyenda span { margin-right: 14px; font-size: 13px; white-space: nowrap; }
 .leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 .miniatura { max-width: 160px; border-radius: 4px; margin-top: 6px; display: block; }
+

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReportaGT - Acceso del personal</title>
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<header></header>
+<main style="max-width:420px">
+  <form id="form" class="tarjeta">
+    <h2>Acceso del personal de la municipalidad</h2>
+    <p class="ayuda">Solo personal autorizado puede cambiar el estado de los reportes.</p>
+    <label for="usuario">Usuario</label>
+    <input id="usuario" autocomplete="username" required>
+    <label for="clave">Contraseña</label>
+    <input id="clave" type="password" autocomplete="current-password" required>
+    <div id="msg" class="msg"></div>
+    <button type="submit">Entrar</button>
+  </form>
+</main>
+<script src="/common.js"></script>
+<script>
+pintarNav('admin.html');
+document.getElementById('form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const msg = document.getElementById('msg');
+  const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario: usuario.value, clave: clave.value }) });
+  const d = await r.json();
+  if (d.ok) { location.href = '/admin.html'; return; }
+  msg.className = 'msg error'; msg.innerHTML = d.errores.map(esc).join('<br>'); clave.value = '';
+});
+</script>
+</body></html>

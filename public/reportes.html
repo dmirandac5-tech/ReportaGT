@@ -9,6 +9,8 @@
 <main>
   <div class="tarjeta">
     <h2>Mapa de reportes</h2>
+    <label for="filtro" style="margin-top:0">Ir al sector:</label>
+    <select id="filtro" style="max-width:260px;margin-bottom:10px"></select>
     <div class="leyenda" id="leyenda"></div>
     <div id="mapa-reportes"></div>
   </div>
@@ -36,21 +38,42 @@ document.getElementById('leyenda').innerHTML = Object.entries(COLORES)
   .map(([c, col]) => `<span><i style="background:${col}"></i>${esc(c)}</span>`).join('');
 
 const mapa = crearMapa('mapa-reportes');
+const pines = L.layerGroup().addTo(mapa);   // pines que se ven en el mapa
+let reportes = [], zonas = {};
 
-async function cargar() {
-  const [reportes, resumen] = await Promise.all([
-    fetch('/api/reportes').then(r => r.json()),
-    fetch('/api/resumen').then(r => r.json()),
-  ]);
-
-  // Pines en el mapa
+// Dibuja los pines y la lista; al elegir un sector, el mapa se acerca a él
+function mostrar(sector) {
+  pines.clearLayers();
   reportes.forEach(r => {
-    L.marker([r.lat, r.lng], { icon: iconoPin(r.categoria) }).addTo(mapa).bindPopup(
-      `<b>${esc(r.numero)} - ${esc(r.categoria)}</b><br>${esc(r.descripcion)}<br><i>${esc(r.direccion)}</i><br>` +
+    L.marker([r.lat, r.lng], { icon: iconoPin(r.categoria) }).addTo(pines).bindPopup(
+      `<b>${esc(r.numero)} - ${esc(nombreCategoria(r))}</b><br>${esc(r.descripcion)}<br><i>${esc(r.direccion)}</i><br>` +
       `<span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span>` +
       (r.foto ? `<img class="miniatura" src="${esc(r.foto)}" alt="foto">` : ''));
   });
-  if (reportes.length) mapa.fitBounds(reportes.map(r => [r.lat, r.lng]), { padding: [30, 30], maxZoom: 16 });
+  document.getElementById('lista').innerHTML = reportes.map(r => `<tr>
+    <td><b>${esc(r.numero)}</b></td><td>${esc(nombreCategoria(r))}</td><td>${esc(r.descripcion)}</td>
+    <td>${esc(r.direccion)}<br><small>${esc(r.sector)}</small></td><td>${fechaCorta(r.creado_en)}</td>
+    <td><span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span></td></tr>`).join('');
+}
+
+// Acerca el mapa al sector elegido ('' = vista general con todos los reportes)
+function irASector(sector) {
+  if (sector) volarASector(mapa, zonas, sector);
+  else if (reportes.length) mapa.fitBounds(reportes.map(r => [r.lat, r.lng]), { padding: [30, 30], maxZoom: 16 });
+}
+
+async function cargar() {
+  const [config, datos, resumen] = await Promise.all([
+    fetch('/api/config').then(r => r.json()),
+    fetch('/api/reportes').then(r => r.json()),
+    fetch('/api/resumen').then(r => r.json()),
+  ]);
+  reportes = datos; zonas = config.zonas;
+
+  const filtro = document.getElementById('filtro');
+  filtro.innerHTML = '<option value="">Todos los sectores</option>' +
+    config.sectores.map(s => `<option>${esc(s)}</option>`).join('');
+  filtro.addEventListener('change', () => irASector(filtro.value));
 
   // Tabla de calor sector x categoría
   const cats = Object.keys(COLORES);
@@ -69,11 +92,8 @@ async function cargar() {
     }).join('') + '</tbody></table></div>'
     : '<p>No hay reportes pendientes.</p>';
 
-  // Lista
-  document.getElementById('lista').innerHTML = reportes.map(r => `<tr>
-    <td><b>${esc(r.numero)}</b></td><td>${esc(r.categoria)}</td><td>${esc(r.descripcion)}</td>
-    <td>${esc(r.direccion)}<br><small>${esc(r.sector)}</small></td><td>${fechaCorta(r.creado_en)}</td>
-    <td><span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span></td></tr>`).join('');
+  mostrar();
+  irASector('');
 }
 cargar();
 </script>

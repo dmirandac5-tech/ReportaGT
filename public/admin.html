@@ -7,7 +7,10 @@
 <header></header>
 <main>
   <div class="tarjeta">
-    <h2>Panel de la municipalidad (demo, sin contraseña)</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">Panel de la municipalidad</h2>
+      <button class="sec" onclick="salir()">Cerrar sesión</button>
+    </div>
     <p class="ayuda">Al cambiar el estado, el vecino recibe un correo automático.</p>
     <div id="msg" class="msg"></div>
     <div style="overflow-x:auto"><table>
@@ -24,7 +27,7 @@ const msg = document.getElementById('msg');
 async function cargar() {
   const reportes = await fetch('/api/reportes').then(r => r.json());
   document.getElementById('lista').innerHTML = reportes.map(r => `<tr>
-    <td><b>${esc(r.numero)}</b></td><td>${esc(r.categoria)}</td>
+    <td><b>${esc(r.numero)}</b></td><td>${esc(nombreCategoria(r))}</td>
     <td>${esc(r.descripcion)}<br><small>Vecino: ${esc(r.nombre)}</small>${r.foto ? `<img class="miniatura" src="${esc(r.foto)}" alt="foto">` : ''}</td>
     <td>${esc(r.direccion)}<br><small>${esc(r.sector)} · <a target="_blank" href="https://www.google.com/maps?q=${r.lat},${r.lng}">mapa</a></small></td>
     <td><span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span></td>
@@ -35,11 +38,16 @@ async function cargar() {
 async function cambiar(id, estado) {
   const r = await fetch(`/api/reportes/${id}/estado`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) });
+  if (r.status === 401) { location.href = '/login.html'; return; }   // la sesión venció
   const d = await r.json();
   if (!d.ok) { msg.className = 'msg error'; msg.innerHTML = d.errores.map(esc).join('<br>'); return; }
   msg.className = 'msg ' + (d.avisos.length ? 'aviso' : 'ok');
   msg.textContent = `${d.numero} ahora está "${estado}". ` + (d.avisos.length ? d.avisos.join(' ') : 'Se avisó al vecino por correo.');
   cargar();
+}
+async function salir() {
+  await fetch('/api/logout', { method: 'POST' });
+  location.href = '/login.html';
 }
 cargar();
 </script>

@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const config = require('./config');
 const { db, numeroReporte } = require('./db');
 const mailer = require('./mailer');
+const auth = require('./auth');
 
 const router = express.Router();
 
@@ -23,13 +24,17 @@ const upload = multer({
 // Convierte una fila de la BD en lo que se muestra públicamente (sin correo del vecino)
 const publico = (r) => ({
   id: r.id, numero: numeroReporte(r.id), categoria: r.categoria, descripcion: r.descripcion,
-  nombre: r.nombre, direccion: r.direccion, sector: r.sector, lat: r.lat, lng: r.lng,
+  categoria_otro: r.categoria_otro, nombre: r.nombre, direccion: r.direccion, sector: r.sector, lat: r.lat, lng: r.lng,
   foto: r.foto ? '/uploads/' + r.foto : null, estado: r.estado, creado_en: r.creado_en,
 });
 
+// Sesión del personal de la muni
+router.post('/login', auth.login);
+router.post('/logout', auth.logout);
+
 // GET /api/config: categorías y sectores para llenar los selects del formulario
 router.get('/config', (req, res) => {
-  res.json({ categorias: config.categorias, estados: config.estados, sectores: config.sectores });
+  res.json({ categorias: config.categorias, estados: config.estados, sectores: config.sectores, zonas: config.zonas });
 });
 
 // GET /api/reportes: todos los reportes (más recientes primero)
@@ -54,12 +59,15 @@ router.post('/reportes', (req, res, next) => {
 
 async function crear(req, res) {
   const { categoria, descripcion, nombre, email, direccion, sector } = req.body;
+  const otro = (req.body.categoria_otro || '').trim();
   const lat = parseFloat(req.body.lat);
   const lng = parseFloat(req.body.lng);
 
   // 1) Validación
   const errores = [];
   if (!config.categorias.includes(categoria)) errores.push('Elige una categoría válida.');
+  // Si elige "Otro", debe decir cuál es el problema
+  if (categoria === 'Otro' && (otro.length < 3 || otro.length > 80)) errores.push('Escribe cuál es el problema (entre 3 y 80 caracteres).');
   if (!descripcion || descripcion.trim().length < 5 || descripcion.length > 500) errores.push('La descripción debe tener entre 5 y 500 caracteres.');
   if (!nombre || nombre.trim().length < 2 || nombre.length > 80) errores.push('Escribe tu nombre.');
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) errores.push('Escribe un correo válido.');
@@ -72,9 +80,9 @@ async function crear(req, res) {
   // 2) Guardar en SQLite (el reporte queda guardado aunque falle el correo)
   const ahora = new Date().toISOString();
   const info = db.prepare(`INSERT INTO reportes
-    (categoria, descripcion, nombre, email, direccion, sector, lat, lng, foto, creado_en, actualizado_en)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(
-    categoria, descripcion.trim(), nombre.trim(), email.trim(), direccion.trim(), sector,
+    (categoria, categoria_otro, descripcion, nombre, email, direccion, sector, lat, lng, foto, creado_en, actualizado_en)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    categoria, categoria === 'Otro' ? otro : null, descripcion.trim(), nombre.trim(), email.trim(), direccion.trim(), sector,
     lat, lng, req.file ? req.file.filename : null, ahora, ahora);
   const reporte = { ...db.prepare('SELECT * FROM reportes WHERE id = ?').get(info.lastInsertRowid) };
   reporte.numero = numeroReporte(reporte.id);
@@ -91,7 +99,7 @@ async function crear(req, res) {
 }
 
 // PATCH /api/reportes/:id/estado: la "municipalidad" cambia el estado (demo, sin login)
-router.patch('/reportes/:id/estado', async (req, res) => {
+router.patch('/reportes/:id/estado', auth.requiereAdminApi, async (req, res) => {
   const { estado } = req.body;
   if (!config.estados.includes(estado)) return res.status(400).json({ ok: false, errores: ['Estado no válido.'] });
   const r = db.prepare('SELECT * FROM reportes WHERE id = ?').get(req.params.id);

@@ -22,6 +22,11 @@ db.exec(`
   )
 `);
 
+// Si la base ya existía sin la columna del texto de "Otro", se agrega
+if (!db.prepare('PRAGMA table_info(reportes)').all().some((c) => c.name === 'categoria_otro')) {
+  db.exec('ALTER TABLE reportes ADD COLUMN categoria_otro TEXT');
+}
+
 // El número de seguimiento sale del id: 1 -> RGT-0001
 const numeroReporte = (id) => 'RGT-' + String(id).padStart(4, '0');
 

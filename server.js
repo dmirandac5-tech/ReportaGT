@@ -6,6 +6,11 @@ const routes = require('./src/routes');
 
 const app = express();
 app.use(express.json());
+const auth = require('./src/auth');
+
+// El panel de administración solo se abre con sesión (debe ir ANTES de servir /public)
+app.get(['/admin', '/admin.html'], auth.requiereAdminPagina, (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.use(express.static(path.join(__dirname, 'public')));
 // Leaflet se sirve desde node_modules (así el mapa no depende de un CDN)
 app.use('/vendor/leaflet', express.static(path.join(__dirname, 'node_modules', 'leaflet', 'dist')));

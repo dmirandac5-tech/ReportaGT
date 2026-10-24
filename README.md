@@ -25,6 +25,9 @@ Navegador ──> Express (server.js) ──> src/routes.js ──> SQLite (repo
 
 Abrir: app http://localhost:3000 · reportes http://localhost:3000/reportes.html · admin http://localhost:3000/admin.html · correos http://localhost:8025
 
+## Acceso al panel /admin
+Solo personal con usuario y contraseña puede abrir `/admin`. Se definen en `.env` (`ADMIN_USER`, `ADMIN_PASS`, `SESSION_SECRET`). La sesión dura 8 horas y tras 5 intentos fallidos se bloquea 15 minutos. Para producción conviene HTTPS y contraseñas por persona.
+
 ## Usar Gmail real
 En `.env` cambia `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER`, `SMTP_PASS` (contraseña de aplicación de Google) y `MUNI_EMAIL`. No hay que tocar código.
 
@@ -37,4 +40,4 @@ En `.env` cambia `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`
 | GET | `/api/resumen` | Conteo por sector y categoría (sin resolver) |
 
 ## Limitaciones del prototipo
-Sin login (`/admin` es abierto, solo para la demo), sin límite de envíos por persona, el mapa necesita internet para los mosaicos de OpenStreetMap.
+Un solo usuario de la muni (el de `.env`, sin roles ni recuperación de contraseña), sin límite de envíos por persona, el mapa necesita internet para los mosaicos de OpenStreetMap.

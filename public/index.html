@@ -14,6 +14,11 @@
     <label for="categoria">Categoría</label>
     <select id="categoria" name="categoria" required></select>
 
+    <div id="bloque-otro" style="display:none">
+      <label for="categoria_otro">¿Cuál es el problema?</label>
+      <input id="categoria_otro" name="categoria_otro" maxlength="80" placeholder="Ej: tapadera de drenaje rota">
+    </div>
+
     <label for="descripcion">Descripción corta</label>
     <textarea id="descripcion" name="descripcion" rows="3" maxlength="500" required placeholder="Ej: bache grande que daña los carros"></textarea>
 
@@ -46,9 +51,19 @@
 pintarNav('index.html');
 
 // Llenar los selects con la configuración del servidor
+let zonas = {};
 fetch('/api/config').then(r => r.json()).then(c => {
+  zonas = c.zonas;
   document.getElementById('categoria').innerHTML = '<option value="">Elige...</option>' + c.categorias.map(x => `<option>${esc(x)}</option>`).join('');
   document.getElementById('sector').innerHTML = '<option value="">Elige...</option>' + c.sectores.map(x => `<option>${esc(x)}</option>`).join('');
+});
+
+// Si elige "Otro", aparece el campo para escribir cuál es el problema
+document.getElementById('categoria').addEventListener('change', (e) => {
+  const esOtro = e.target.value === 'Otro';
+  document.getElementById('bloque-otro').style.display = esOtro ? 'block' : 'none';
+  document.getElementById('categoria_otro').required = esOtro;
+  if (!esOtro) document.getElementById('categoria_otro').value = '';
 });
 
 // Mapa con un solo marcador que se mueve con cada clic
@@ -59,7 +74,16 @@ mapa.on('click', (e) => {
   if (marcador) marcador.setLatLng(e.latlng); else marcador = L.marker(e.latlng).addTo(mapa);
   document.getElementById('lat').value = lat.toFixed(6);
   document.getElementById('lng').value = lng.toFixed(6);
-  document.getElementById('coords').textContent = `Punto marcado: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  // Detectar el sector automáticamente (se puede cambiar a mano en el selector)
+  const sector = sectorDe(zonas, lat, lng);
+  if (sector) document.getElementById('sector').value = sector;
+  document.getElementById('coords').textContent = `Punto marcado: ${lat.toFixed(6)}, ${lng.toFixed(6)}` +
+    (sector ? ` · ${sector}` : '');
+});
+
+// Al elegir un sector, el mapa se acerca a esa zona para marcar el punto más fácil
+document.getElementById('sector').addEventListener('change', (e) => {
+  if (zonas[e.target.value]) volarASector(mapa, zonas, e.target.value);
 });
 
 const msg = document.getElementById('msg');
@@ -78,6 +102,7 @@ document.getElementById('form').addEventListener('submit', async (ev) => {
       `<b>¡Reporte enviado! Tu número de seguimiento es ${esc(datos.numero)}.</b>` +
       (datos.avisos.length ? '<br>Atención: ' + datos.avisos.map(esc).join(' ') + ' Tu reporte sí quedó guardado.' : '<br>Te enviamos una confirmación por correo.'));
     ev.target.reset();
+    document.getElementById('bloque-otro').style.display = 'none';
     if (marcador) { marcador.remove(); marcador = null; }
     document.getElementById('coords').textContent = 'Aún no marcaste un punto.';
     msg.scrollIntoView({ behavior: 'smooth' });

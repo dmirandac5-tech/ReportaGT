@@ -1,7 +1,7 @@
 // Código compartido por todas las páginas.
 
 // Centro del mapa: Boca del Monte, Villa Canales
-const CENTRO = [14.5, -90.53];
+const CENTRO = [14.5459, -90.527];
 
 // Un color por categoría (para pines y leyenda)
 const COLORES = {
@@ -9,6 +9,7 @@ const COLORES = {
   'Basura en la calle': '#7d6608',
   'Alumbrado público dañado': '#f1c40f',
   'Calle sin pavimentar': '#8e44ad',
+  'Otro': '#7f8c8d',
 };
 
 // Escapa texto del usuario antes de ponerlo en HTML
@@ -42,3 +43,21 @@ function iconoPin(categoria) {
 
 const claseEstado = (e) => e.replace(' ', '-');
 const fechaCorta = (iso) => new Date(iso).toLocaleDateString('es-GT', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// --- Sectores ---
+// Devuelve el nombre del sector donde cae un punto (zonas viene de /api/config)
+function sectorDe(zonas, lat, lng) {
+  return Object.keys(zonas).find((n) => {
+    const [sur, oeste, norte, este] = zonas[n];
+    return lat >= sur && lat < norte && lng >= oeste && lng < este;
+  }) || null;
+}
+
+// Se desplaza con animación al centro de un sector y se acerca bastante (zoom 17)
+function volarASector(mapa, zonas, nombre) {
+  const [sur, oeste, norte, este] = zonas[nombre];
+  mapa.setView([(sur + norte) / 2, (oeste + este) / 2], 17, { animate: true, duration: 1.2 });
+}
+
+// Nombre de la categoría; si es "Otro", muestra lo que escribió el vecino
+const nombreCategoria = (r) => (r.categoria === 'Otro' && r.categoria_otro ? 'Otro: ' + r.categoria_otro : r.categoria);
