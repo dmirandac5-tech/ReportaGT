@@ -1,3 +1,5 @@
+<img src="public/img/reportagt-logo.svg" alt="ReportaGT" height="60">
+
 # ReportaGT (prototipo)
 
 Los vecinos de Boca del Monte, Villa Canales reportan baches, basura, alumbrado dañado y calles sin pavimentar. Cada reporte queda guardado y llega por correo a la municipalidad con ubicación, foto y número de seguimiento (RGT-0001...).

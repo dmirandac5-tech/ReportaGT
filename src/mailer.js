@@ -17,12 +17,12 @@ const esc = (s) =>
 
 // Marco HTML común para todos los correos
 function plantilla(titulo, contenido) {
-  return `<!DOCTYPE html><html lang="es"><body style="margin:0;background:#f3f5f7;font-family:Arial,Helvetica,sans-serif;color:#222">
+  return `<!DOCTYPE html><html lang="es"><body style="margin:0;background:#f3f5f7;font-family:Arial,Helvetica,sans-serif;color:#334155">
   <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
     <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;max-width:600px">
-      <tr><td style="background:#25d366;color:#06362d;padding:18px 24px;font-size:20px;font-weight:bold">ReportaGT
-        <span style="font-weight:normal;font-size:13px;display:block;opacity:.85">Boca del Monte, Villa Canales</span></td></tr>
-      <tr><td style="padding:24px"><h2 style="margin:0 0 16px;font-size:18px">${titulo}</h2>${contenido}</td></tr>
+      <tr><td style="background:#ffffff;border-bottom:4px solid #051B3F;padding:18px 24px"><span style="font-size:26px;font-weight:bold;color:#051B3F">Reporta<span style="color:#1F9D3A">GT</span></span>
+        <span style="font-size:13px;display:block;color:#334155">Boca del Monte, Villa Canales</span></td></tr>
+      <tr><td style="padding:24px"><h2 style="margin:0 0 16px;font-size:18px;color:#051B3F">${titulo}</h2>${contenido}</td></tr>
       <tr><td style="background:#f3f5f7;padding:12px 24px;font-size:12px;color:#777">Mensaje automático de ReportaGT (prototipo).</td></tr>
     </table></td></tr></table></body></html>`;
 }
@@ -55,7 +55,7 @@ async function enviarAMunicipalidad(r) {
       ${fila('Coordenadas', `${r.lat}, ${r.lng}`)}
       ${fila('Vecino', `${esc(r.nombre)} (${esc(r.email)})`)}${fila('Fecha', fechaLegible(r.creado_en))}
     </table>
-    <p><a href="${mapa}" style="background:#128c7e;color:#fff;padding:10px 16px;border-radius:5px;text-decoration:none;display:inline-block">Ver ubicación en Google Maps</a></p>
+    <p><a href="${mapa}" style="background:#15803D;color:#fff;padding:10px 16px;border-radius:5px;text-decoration:none;display:inline-block">Ver ubicación en Google Maps</a></p>
     ${htmlFoto}`
   );
   const texto = [
@@ -82,7 +82,7 @@ async function enviarConfirmacionVecino(r) {
   const html = plantilla(
     `¡Gracias por tu reporte, ${esc(r.nombre)}!`,
     `<p>Recibimos tu reporte y ya fue enviado a la Municipalidad de Villa Canales.</p>
-     <p style="font-size:26px;margin:16px 0;color:#128c7e"><b>${r.numero}</b></p>
+     <p style="font-size:26px;margin:16px 0;color:#15803D"><b>${r.numero}</b></p>
      <table cellpadding="0" cellspacing="0" style="font-size:14px">
        ${fila('Categoría', esc(etiqueta(r)))}${fila('Referencia', esc(r.direccion))}${fila('Estado', 'pendiente')}
      </table>
@@ -101,7 +101,7 @@ async function enviarCambioEstado(r) {
   const html = plantilla(
     `Tu reporte ${r.numero} cambió de estado`,
     `<p>Hola ${esc(r.nombre)}, el estado de tu reporte (${esc(etiqueta(r))}, ${esc(r.direccion)}) ahora es:</p>
-     <p style="font-size:22px;margin:16px 0;color:#128c7e"><b>${esc(r.estado.toUpperCase())}</b></p>
+     <p style="font-size:22px;margin:16px 0;color:#15803D"><b>${esc(r.estado.toUpperCase())}</b></p>
      <p><a href="${config.baseUrl}/reportes.html">Ver el mapa de reportes</a></p>`
   );
   const texto = `Hola ${r.nombre},\n\nTu reporte ${r.numero} (${etiqueta(r)}, ${r.direccion}) ahora está: ${r.estado.toUpperCase()}.\n\nReportaGT`;

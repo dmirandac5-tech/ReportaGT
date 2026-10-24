@@ -1,15 +1,20 @@
 /* ReportaGT - estilos. Todos los valores salen de las variables de :root. */
 :root {
-  /* Colores: un principal, un texto oscuro y tres estados distintos entre sí */
-  --primario: #0f766e;        /* botones y enlaces (contraste 5.5:1 con blanco) */
-  --primario-oscuro: #0b524c;
-  --encabezado: #25d366;      /* verde WhatsApp */
-  --texto: #16302b;
-  --texto-suave: #4a635d;
-  --fondo: #eefaf2;
+  /* Paleta (combina con el logo y con la Municipalidad de Villa Canales) */
+  --marino: #051B3F;          /* títulos y textos fuertes */
+  --verde-logo: #1F9D3A;      /* solo logo y detalles grandes (no para botones con texto pequeño) */
+  --verde: #15803D;           /* botones, enlaces y textos verdes (5:1 con blanco) */
+  --verde-claro: #E8F5EC;     /* fondos suaves */
+  --pizarra: #334155;         /* texto normal */
+  --primario: var(--verde);
+  --primario-oscuro: #0F5F2D; /* al pasar el mouse y en el foco */
+  --texto: var(--pizarra);
+  --texto-suave: #475569;
+  --fondo: var(--verde-claro);
   --superficie: #ffffff;
   --borde: #c3dfcc;
   --error: #b42318;
+  /* Colores de estado (siempre van con texto e icono) */
   --pendiente-fg: #a12116;  --pendiente-bg: #fde8e6;
   --proceso-fg: #7a4100;    --proceso-bg: #fff1cf;
   --resuelto-fg: #116329;   --resuelto-bg: #d9f5e1;
@@ -22,7 +27,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: var(--fondo); color: var(--texto); }
-h1, h2, h3 { line-height: 1.25; margin: 0 0 var(--e3); }
+h1, h2, h3 { line-height: 1.25; margin: 0 0 var(--e3); color: var(--marino); }
 h1 { font-size: 1.75rem; } h2 { font-size: 1.25rem; } h3 { font-size: 1.05rem; }
 a { color: var(--primario); }
 small, .ayuda { color: var(--texto-suave); }
@@ -31,13 +36,15 @@ small, .ayuda { color: var(--texto-suave); }
 /* Foco visible con teclado en todo lo interactivo */
 :focus-visible { outline: 3px solid var(--primario-oscuro); outline-offset: 2px; }
 
-/* Encabezado y navegación */
-header { background: var(--encabezado); color: #06362d; padding: var(--e3) var(--e5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--e4); }
-header h1 { margin: 0; font-size: 1.25rem; }
-header small { display: block; font-weight: normal; font-size: .8rem; color: #06362d; }
+/* Encabezado: fondo blanco con el logo a color */
+header { background: #fff; border-bottom: 4px solid var(--marino); padding: var(--e2) var(--e5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e5); }
+.logo { display: inline-flex; align-items: center; min-height: 44px; border-radius: var(--radio); }
+.logo img { height: 36px; width: auto; display: block; }
 nav { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e4); }
-nav a { color: #06362d; text-decoration: none; padding: var(--e2) 0; min-height: 44px; display: inline-flex; align-items: center; border-bottom: 3px solid transparent; font-weight: 600; }
-nav a[aria-current="page"], nav a:hover { border-bottom-color: #06362d; }
+nav a { color: var(--marino); text-decoration: none; padding: var(--e2) 0; min-height: 44px; display: inline-flex; align-items: center; border-bottom: 3px solid transparent; font-weight: 600; }
+nav a[aria-current="page"], nav a:hover { border-bottom-color: var(--verde); }
+.logo-pagina { display: block; height: 32px; width: auto; margin: 0 auto var(--e4); }
+.logo-login { display: block; width: 220px; max-width: 80%; height: auto; margin: 0 auto var(--e5); }
 
 main { max-width: 1040px; margin: var(--e5) auto; padding: 0 var(--e4); }
 main.ancho { max-width: 1200px; }
@@ -105,13 +112,13 @@ td.calor { text-align: center; font-weight: 700; }
 .contadores { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--e3); margin-bottom: var(--e5); }
 .contador-caja { background: var(--superficie); color: var(--texto); border: 2px solid var(--borde); text-align: left; padding: var(--e3) var(--e4); border-radius: var(--radio-grande); display: block; }
 .contador-caja:hover:not(:disabled) { background: var(--superficie); border-color: var(--primario); }
-.contador-caja[aria-pressed="true"] { border-color: var(--primario); background: #e1f6ec; }
+.contador-caja[aria-pressed="true"] { border-color: var(--primario); background: var(--verde-claro); }
 .contador-caja strong { display: block; font-size: 1.8rem; line-height: 1.1; }
 
 /* Lista de reportes del panel */
 .lista { list-style: none; margin: 0; padding: 0; }
 .fila { display: grid; grid-template-columns: 28px 64px 90px 1fr 100px 110px 150px; gap: var(--e3); align-items: center; padding: var(--e2) var(--e3); border-bottom: 1px solid var(--borde); background: var(--superficie); }
-.fila:hover { background: #f4fcf7; }
+.fila:hover { background: #f6fbf8; }
 .fila.encabezado-lista { font-weight: 700; font-size: .85rem; color: var(--texto-suave); background: transparent; }
 .fila .abrir { all: unset; cursor: pointer; display: block; min-height: 44px; line-height: 1.3; padding: var(--e1) 0; }
 .fila .abrir:focus-visible { outline: 3px solid var(--primario-oscuro); outline-offset: 2px; }
@@ -136,7 +143,7 @@ td.calor { text-align: center; font-weight: 700; }
 dialog { border: 0; border-radius: var(--radio-grande); padding: var(--e5); max-width: 420px; box-shadow: 0 8px 32px rgba(0, 0, 0, .3); }
 dialog::backdrop { background: rgba(0, 0, 0, .4); }
 .acciones { display: flex; gap: var(--e3); justify-content: flex-end; margin-top: var(--e4); flex-wrap: wrap; }
-.lote { background: #e1f6ec; border: 1px solid var(--primario); border-radius: var(--radio); padding: var(--e3) var(--e4); margin-bottom: var(--e3); display: flex; flex-wrap: wrap; gap: var(--e3); align-items: center; }
+.lote { background: var(--verde-claro); border: 1px solid var(--primario); border-radius: var(--radio); padding: var(--e3) var(--e4); margin-bottom: var(--e3); display: flex; flex-wrap: wrap; gap: var(--e3); align-items: center; }
 .lote select { width: auto; }
 .cabecera-panel { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--e3); margin-bottom: var(--e4); }
 .cabecera-panel .acciones { margin: 0; align-items: center; }
@@ -150,10 +157,12 @@ dialog::backdrop { background: rgba(0, 0, 0, .4); }
 .vista-previa { display: flex; align-items: center; gap: var(--e3); margin-top: var(--e2); }
 .vista-previa img { max-width: 120px; max-height: 90px; border-radius: var(--radio); border: 1px solid var(--borde); }
 .lista-publica .fila-pub { cursor: pointer; }
-.fila-pub[aria-selected="true"] td { background: #e1f6ec; }
+.fila-pub[aria-selected="true"] td { background: var(--verde-claro); }
 
 /* Celular: filas en tarjetas, detalle a pantalla completa */
 @media (max-width: 760px) {
+  .logo img { height: 30px; }
+  header { padding: var(--e2) var(--e4); }
   .dos { grid-template-columns: 1fr; }
   .contadores { grid-template-columns: repeat(2, 1fr); }
   .tarjeta { padding: var(--e4); }

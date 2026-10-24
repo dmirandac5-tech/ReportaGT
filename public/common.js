@@ -29,7 +29,7 @@ function esc(s) {
 // Barra de navegación igual en todas las páginas
 function pintarNav(activa) {
   const links = [['index.html', 'Reportar'], ['reportes.html', 'Reportes'], ['seguimiento.html', 'Seguimiento'], ['admin.html', 'Personal de la muni']];
-  document.querySelector('header').innerHTML = `<h1>ReportaGT<small>Boca del Monte, Villa Canales</small></h1>
+  document.querySelector('header').innerHTML = `<a class="logo" href="/"><img src="/img/reportagt-logo.svg" alt="ReportaGT"></a>
     <nav aria-label="Principal">${links.map(([u, t]) =>
       `<a href="/${u}" ${u === activa ? 'aria-current="page"' : ''}>${t}</a>`).join('')}</nav>`;
 }
