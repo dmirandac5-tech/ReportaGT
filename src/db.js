@@ -2,7 +2,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const db = new Database(path.join(__dirname, '..', 'reportagt.db'));
+// DB_FILE solo se usa en las pruebas automáticas (base temporal, para no tocar los datos reales)
+const db = new Database(process.env.DB_FILE || path.join(__dirname, '..', 'reportagt.db'));
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS reportes (

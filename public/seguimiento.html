@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReportaGT - Seguimiento de mi reporte</title>
+<link rel="stylesheet" href="/style.css">
+</head><body>
+<header></header>
+<main style="max-width:560px">
+  <section class="tarjeta">
+    <h1>Seguimiento de mi reporte</h1>
+    <p class="ayuda">Escribe el número que recibiste por correo, por ejemplo RGT-0012.</p>
+    <form id="form" novalidate>
+      <label for="numero">Número de reporte</label>
+      <input id="numero" name="numero" placeholder="RGT-0012" autocomplete="off" aria-describedby="error">
+      <p class="error-campo" id="error" role="alert"></p>
+      <button type="submit" id="buscar">Consultar</button>
+    </form>
+  </section>
+  <section class="tarjeta" id="resultado" aria-live="polite" hidden></section>
+</main>
+<script src="/common.js"></script>
+<script>
+pintarNav('seguimiento.html');
+const $ = (id) => document.getElementById(id);
+
+async function consultar(numero) {
+  $('error').textContent = ''; $('resultado').hidden = true; $('numero').removeAttribute('aria-invalid');
+  if (!/^(?:rgt-?)?\d{1,6}$/i.test(numero.trim())) {
+    $('error').textContent = 'Escribe el número con este formato: RGT-0012.'; $('numero').setAttribute('aria-invalid', 'true'); return;
+  }
+  $('buscar').disabled = true; $('buscar').textContent = 'Consultando...';
+  try {
+    const r = await fetch('/api/seguimiento/' + encodeURIComponent(numero.trim()));
+    const d = await r.json();
+    if (!d.ok) { $('error').textContent = d.errores.join(' '); $('numero').setAttribute('aria-invalid', 'true'); return; }
+    $('resultado').hidden = false;
+    $('resultado').innerHTML = `<h2>${esc(d.numero)}</h2><p>${insignia(d.estado)}</p>
+      <dl class="datos"><dt>Categoría</dt><dd>${esc(nombreCategoria(d))}</dd><dt>Sector</dt><dd>${esc(d.sector)}</dd>
+      <dt>Enviado</dt><dd>${fechaHora(d.creado_en)}</dd><dt>Última novedad</dt><dd>${fechaHora(d.actualizado_en)}</dd></dl>
+      <p class="ayuda">${d.estado === 'resuelto' ? 'La municipalidad marcó este reporte como resuelto.' : d.estado === 'en proceso' ? 'La municipalidad ya está trabajando en este reporte.' : 'Tu reporte está pendiente de revisión.'}</p>`;
+  } catch (e) {
+    $('error').textContent = 'No se pudo consultar. Revisa tu conexión e intenta de nuevo.';
+  } finally { $('buscar').disabled = false; $('buscar').textContent = 'Consultar'; }
+}
+$('form').addEventListener('submit', (e) => { e.preventDefault(); consultar($('numero').value); });
+const inicial = new URLSearchParams(location.search).get('n');
+if (inicial) { $('numero').value = inicial; consultar(inicial); }
+</script>
+</body></html>

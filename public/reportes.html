@@ -7,94 +7,118 @@
 </head><body>
 <header></header>
 <main>
-  <div class="tarjeta">
-    <h2>Mapa de reportes</h2>
-    <label for="filtro" style="margin-top:0">Ir al sector:</label>
-    <select id="filtro" style="max-width:260px;margin-bottom:10px"></select>
+  <section class="tarjeta" aria-labelledby="t-mapa">
+    <h1 id="t-mapa">Reportes de Boca del Monte</h1>
+    <div class="barra">
+      <div><label for="f-categoria">Categoría</label><select id="f-categoria"></select></div>
+      <div><label for="f-estado">Estado</label><select id="f-estado"></select></div>
+      <div><label for="f-sector">Sector</label><select id="f-sector"></select></div>
+    </div>
+    <p class="ayuda"><span id="resultados" aria-live="polite"></span> <button class="enlace" id="btn-limpiar">Limpiar filtros</button></p>
     <div class="leyenda" id="leyenda"></div>
-    <div id="mapa-reportes"></div>
-  </div>
+    <div id="mapa-reportes" aria-label="Mapa de reportes"></div>
+  </section>
 
-  <div class="tarjeta">
-    <h2>¿Dónde reparar primero?</h2>
-    <p class="ayuda">Reportes sin resolver por sector y categoría. Mientras más oscuro el rojo, más urgente es la zona.</p>
-    <div id="resumen"></div>
-  </div>
-
-  <div class="tarjeta">
-    <h2>Todos los reportes</h2>
-    <div style="overflow-x:auto"><table>
+  <section class="tarjeta" aria-labelledby="t-lista">
+    <h2 id="t-lista">Lista de reportes</h2>
+    <p class="ayuda">Toca un reporte para verlo en el mapa.</p>
+    <div id="cargando" class="vacio cargando">Cargando reportes...</div>
+    <div id="error" class="msg error" role="alert" hidden>No se pudieron cargar los reportes. <button class="sec" id="reintentar">Reintentar</button></div>
+    <div class="scroll-x"><table class="lista-publica" id="tabla" hidden>
       <thead><tr><th>N.º</th><th>Categoría</th><th>Descripción</th><th>Ubicación</th><th>Fecha</th><th>Estado</th></tr></thead>
       <tbody id="lista"></tbody>
     </table></div>
-  </div>
+    <p id="vacio" class="vacio" hidden></p>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-prioridad">
+    <h2 id="t-prioridad">¿Dónde reparar primero?</h2>
+    <p class="ayuda">Reportes sin resolver por sector y categoría. Mientras más oscuro el rojo, más urgente es la zona.</p>
+    <div id="resumen"></div>
+  </section>
 </main>
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/common.js"></script>
 <script>
 pintarNav('reportes.html');
+const $ = (id) => document.getElementById(id);
 
-document.getElementById('leyenda').innerHTML = Object.entries(COLORES)
-  .map(([c, col]) => `<span><i style="background:${col}"></i>${esc(c)}</span>`).join('');
+$('leyenda').innerHTML = Object.entries(COLORES).map(([c, col]) => `<span><i style="background:${col}"></i>${esc(c)}</span>`).join('');
 
 const mapa = crearMapa('mapa-reportes');
-const pines = L.layerGroup().addTo(mapa);   // pines que se ven en el mapa
-let reportes = [], zonas = {};
+const pines = L.layerGroup().addTo(mapa);
+const marcadores = {};                         // id -> marcador, para sincronizar con la lista
+let reportes = [], zonas = {}, seleccionado = null;
+const filtros = { categoria: '', estado: '', sector: '' };
 
-// Dibuja los pines y la lista; al elegir un sector, el mapa se acerca a él
-function mostrar(sector) {
+function visibles() {
+  return reportes.filter((r) => (!filtros.categoria || r.categoria === filtros.categoria) &&
+    (!filtros.estado || r.estado === filtros.estado) && (!filtros.sector || r.sector === filtros.sector));
+}
+
+// Pinta pines y lista; "acercar" mueve el mapa a lo que se ve
+function mostrar(acercar) {
+  const lista = visibles();
   pines.clearLayers();
-  reportes.forEach(r => {
-    L.marker([r.lat, r.lng], { icon: iconoPin(r.categoria) }).addTo(pines).bindPopup(
-      `<b>${esc(r.numero)} - ${esc(nombreCategoria(r))}</b><br>${esc(r.descripcion)}<br><i>${esc(r.direccion)}</i><br>` +
-      `<span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span>` +
-      (r.foto ? `<img class="miniatura" src="${esc(r.foto)}" alt="foto">` : ''));
+  Object.keys(marcadores).forEach((k) => delete marcadores[k]);
+  lista.forEach((r) => {
+    const m = L.marker([r.lat, r.lng], { icon: iconoPin(r.categoria, r.id === seleccionado) }).addTo(pines).bindPopup(
+      `<b>${esc(r.numero)} - ${esc(nombreCategoria(r))}</b><br>${esc(r.descripcion)}<br><i>${esc(r.direccion)}</i><br>${insignia(r.estado)}` +
+      (r.foto ? `<br><img class="miniatura" style="width:120px;height:auto" src="${esc(r.foto)}" alt="Foto del reporte">` : ''));
+    m.on('click', () => seleccionar(r.id, false));
+    marcadores[r.id] = m;
   });
-  document.getElementById('lista').innerHTML = reportes.map(r => `<tr>
-    <td><b>${esc(r.numero)}</b></td><td>${esc(nombreCategoria(r))}</td><td>${esc(r.descripcion)}</td>
-    <td>${esc(r.direccion)}<br><small>${esc(r.sector)}</small></td><td>${fechaCorta(r.creado_en)}</td>
-    <td><span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span></td></tr>`).join('');
+  $('resultados').textContent = `${lista.length} de ${reportes.length} reportes.`;
+  $('btn-limpiar').hidden = !(filtros.categoria || filtros.estado || filtros.sector);
+
+  $('tabla').hidden = !lista.length;
+  $('vacio').hidden = !!lista.length;
+  $('vacio').textContent = reportes.length ? 'No hay reportes con esos filtros.' : 'Todavía no hay reportes.';
+  $('lista').innerHTML = lista.map((r) => `<tr class="fila-pub" data-id="${r.id}" aria-selected="${r.id === seleccionado}">
+    <td><button class="enlace" style="padding:0;min-height:44px" data-ver="${r.id}"><b>${esc(r.numero)}</b></button></td>
+    <td>${esc(nombreCategoria(r))}</td><td>${esc(r.descripcion)}</td>
+    <td>${esc(r.direccion)}<br><small>${esc(r.sector)}</small></td><td>${fechaCorta(r.creado_en)}</td><td>${insignia(r.estado)}</td></tr>`).join('');
+
+  if (!acercar) return;
+  if (filtros.sector) volarASector(mapa, zonas, filtros.sector);
+  else if (lista.length) mapa.fitBounds(lista.map((r) => [r.lat, r.lng]), { padding: [30, 30], maxZoom: 16 });
 }
 
-// Acerca el mapa al sector elegido ('' = vista general con todos los reportes)
-function irASector(sector) {
-  if (sector) volarASector(mapa, zonas, sector);
-  else if (reportes.length) mapa.fitBounds(reportes.map(r => [r.lat, r.lng]), { padding: [30, 30], maxZoom: 16 });
+// Lista <-> mapa: elegir un reporte centra el mapa en su pin
+function seleccionar(id, moverMapa) {
+  seleccionado = id;
+  document.querySelectorAll('.fila-pub').forEach((f) => f.setAttribute('aria-selected', Number(f.dataset.id) === id));
+  Object.entries(marcadores).forEach(([k, m]) => m.setIcon(iconoPin(reportes.find((r) => r.id === Number(k)).categoria, Number(k) === id)));
+  const m = marcadores[id];
+  if (moverMapa && m) { mapa.setView(m.getLatLng(), Math.max(mapa.getZoom(), 17), { animate: true }); m.openPopup(); $('mapa-reportes').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  if (!moverMapa) { const f = document.querySelector(`.fila-pub[data-id="${id}"]`); if (f) f.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
 }
+$('lista').addEventListener('click', (e) => { const f = e.target.closest('.fila-pub'); if (f) seleccionar(Number(f.dataset.id), true); });
+
+// Filtros
+function llenarSelect(id, primero, opciones) {
+  $(id).innerHTML = `<option value="">${primero}</option>` + opciones.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('');
+}
+['categoria', 'estado', 'sector'].forEach((k) => $('f-' + k).addEventListener('change', (e) => { filtros[k] = e.target.value; mostrar(true); }));
+$('btn-limpiar').addEventListener('click', () => {
+  Object.keys(filtros).forEach((k) => { filtros[k] = ''; $('f-' + k).value = ''; }); mostrar(true);
+});
 
 async function cargar() {
-  const [config, datos, resumen] = await Promise.all([
-    fetch('/api/config').then(r => r.json()),
-    fetch('/api/reportes').then(r => r.json()),
-    fetch('/api/resumen').then(r => r.json()),
-  ]);
-  reportes = datos; zonas = config.zonas;
-
-  const filtro = document.getElementById('filtro');
-  filtro.innerHTML = '<option value="">Todos los sectores</option>' +
-    config.sectores.map(s => `<option>${esc(s)}</option>`).join('');
-  filtro.addEventListener('change', () => irASector(filtro.value));
-
-  // Tabla de calor sector x categoría
-  const cats = Object.keys(COLORES);
-  const sectores = [...new Set(resumen.porSector.map(x => x.sector))].sort();
-  const cuenta = (s, c) => (resumen.porSector.find(x => x.sector === s && x.categoria === c) || {}).total || 0;
-  const maximo = Math.max(1, ...resumen.porSector.map(x => x.total));
-  document.getElementById('resumen').innerHTML = sectores.length ?
-    `<div style="overflow-x:auto"><table><thead><tr><th>Sector</th>${cats.map(c => `<th>${esc(c)}</th>`).join('')}<th>Total</th></tr></thead><tbody>` +
-    sectores.map(s => {
-      const total = cats.reduce((a, c) => a + cuenta(s, c), 0);
-      return `<tr><td><b>${esc(s)}</b></td>` + cats.map(c => {
-        const n = cuenta(s, c);
-        // La opacidad del rojo crece con la cantidad
-        return `<td class="calor" style="background:rgba(192,57,43,${n ? 0.15 + 0.7 * n / maximo : 0})">${n || ''}</td>`;
-      }).join('') + `<td class="calor">${total}</td></tr>`;
-    }).join('') + '</tbody></table></div>'
-    : '<p>No hay reportes pendientes.</p>';
-
-  mostrar();
-  irASector('');
+  $('cargando').hidden = false; $('error').hidden = true;
+  try {
+    const [config, datos, resumen] = await Promise.all([
+      fetch('/api/config').then((r) => r.json()), fetch('/api/reportes').then((r) => r.json()), fetch('/api/resumen').then((r) => r.json())]);
+    reportes = datos; zonas = config.zonas;
+    llenarSelect('f-categoria', 'Todas', config.categorias.map((c) => [c, c]));
+    llenarSelect('f-estado', 'Todos', Object.entries(ESTADOS).map(([k, e]) => [k, e.texto]));
+    llenarSelect('f-sector', 'Todos', config.sectores.map((s) => [s, s]));
+    $('resumen').innerHTML = tablaCalor(resumen);
+    $('cargando').hidden = true;
+    mostrar(true);
+  } catch (e) { $('cargando').hidden = true; $('error').hidden = false; }
 }
+$('reintentar').addEventListener('click', cargar);
 cargar();
 </script>
 </body></html>

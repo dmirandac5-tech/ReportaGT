@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "test": "node tests/pruebas.js"
   },
   "license": "MIT",
   "private": true,

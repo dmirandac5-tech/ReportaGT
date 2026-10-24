@@ -32,6 +32,26 @@ const publico = (r) => ({
 router.post('/login', auth.login);
 router.post('/logout', auth.logout);
 
+// GET /api/admin/yo: quién está conectado (solo personal; el panel lo usa para mostrar el usuario)
+router.get('/admin/yo', auth.requiereAdminApi, (req, res) => res.json({ ok: true, usuario: auth.usuarioActual(req) }));
+
+// GET /api/seguimiento/:numero: consulta pública de solo lectura para el vecino.
+// Devuelve estado, categoría, sector y fechas; nunca nombre ni correo.
+const consultas = new Map();           // ip -> { conteo, desde }
+const MAX_CONSULTAS = 30, VENTANA_CONSULTAS_MS = 10 * 60 * 1000;
+router.get('/seguimiento/:numero', (req, res) => {
+  const c = consultas.get(req.ip);
+  if (!c || Date.now() - c.desde > VENTANA_CONSULTAS_MS) consultas.set(req.ip, { conteo: 1, desde: Date.now() });
+  else if (++c.conteo > MAX_CONSULTAS) return res.status(429).json({ ok: false, errores: ['Demasiadas consultas. Intenta de nuevo en unos minutos.'] });
+
+  // Acepta RGT-0012, rgt12 o solo 12
+  const m = /^(?:rgt-?)?(\d{1,6})$/i.exec(req.params.numero.trim());
+  const r = m && db.prepare('SELECT * FROM reportes WHERE id = ?').get(Number(m[1]));
+  if (!r) return res.status(404).json({ ok: false, errores: ['No encontramos un reporte con ese número.'] });
+  res.json({ ok: true, numero: numeroReporte(r.id), categoria: r.categoria, categoria_otro: r.categoria_otro,
+    sector: r.sector, estado: r.estado, creado_en: r.creado_en, actualizado_en: r.actualizado_en });
+});
+
 // GET /api/config: categorías y sectores para llenar los selects del formulario
 router.get('/config', (req, res) => {
   res.json({ categorias: config.categorias, estados: config.estados, sectores: config.sectores, zonas: config.zonas });

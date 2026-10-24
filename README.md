@@ -8,7 +8,8 @@ Navegador ──> Express (server.js) ──> src/routes.js ──> SQLite (repo
                                           └──────────> src/mailer.js ──> SMTP (Mailpit / Gmail)
 ```
 - `src/config.js` lee el `.env` · `src/db.js` crea la tabla · `src/mailer.js` arma los 3 correos · `src/routes.js` valida, guarda y envía.
-- `public/` tiene las 3 páginas: `index.html` (reportar), `reportes.html` (mapa + resumen), `admin.html` (cambiar estado).
+- `public/` tiene las páginas: `index.html` (reportar, en 4 pasos), `reportes.html` (mapa, filtros y lista sincronizada), `seguimiento.html` (el vecino consulta su número), `login.html` y `admin.html` (panel de la muni).
+- Todo el CSS está en `public/style.css` (variables en `:root`) y el JavaScript compartido en `public/common.js`.
 - Si falla el correo, el reporte igual se guarda y el vecino ve un aviso.
 
 ## Cómo correrlo
@@ -28,6 +29,18 @@ Abrir: app http://localhost:3000 · reportes http://localhost:3000/reportes.html
 ## Acceso al panel /admin
 Solo personal con usuario y contraseña puede abrir `/admin`. Se definen en `.env` (`ADMIN_USER`, `ADMIN_PASS`, `SESSION_SECRET`). La sesión dura 8 horas y tras 5 intentos fallidos se bloquea 15 minutos. Para producción conviene HTTPS y contraseñas por persona.
 
+## Panel de la municipalidad
+Resumen con contadores clicables, búsqueda, filtros (estado, categoría, sector) y orden, lista compacta con detalle en panel lateral (foto, mapa, cambio de estado), cambio por lote con aviso de cuántos correos se envían, y "Dónde atender primero". Confirmación solo al resolver. Funciona en celular (tarjetas) y con teclado (Esc cierra el detalle).
+
+## Seguimiento para el vecino
+`/seguimiento.html` (o el enlace al final del formulario): el vecino escribe RGT-0012 y ve estado, categoría, sector y fechas, sin nombre ni correo. Límite de 30 consultas cada 10 minutos por IP.
+
+## Pruebas automáticas
+```
+npm test
+```
+Levanta su propio servidor con una base temporal (no toca `reportagt.db`) y comprueba la API, el login, los límites de uso y que los correos lleguen a Mailpit. Requiere Mailpit encendido.
+
 ## Usar Gmail real
 En `.env` cambia `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER`, `SMTP_PASS` (contraseña de aplicación de Google) y `MUNI_EMAIL`. No hay que tocar código.
 
@@ -38,6 +51,9 @@ En `.env` cambia `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`
 | GET | `/api/reportes` | Lista de reportes |
 | PATCH | `/api/reportes/:id/estado` | Cambia estado y avisa al vecino |
 | GET | `/api/resumen` | Conteo por sector y categoría (sin resolver) |
+| GET | `/api/seguimiento/:numero` | Estado público de un reporte (con límite por IP) |
+| GET | `/api/admin/yo` | Usuario conectado (solo personal) |
+| POST | `/api/login`, `/api/logout` | Sesión del personal |
 
 ## Limitaciones del prototipo
 Un solo usuario de la muni (el de `.env`, sin roles ni recuperación de contraseña), sin límite de envíos por persona, el mapa necesita internet para los mosaicos de OpenStreetMap.

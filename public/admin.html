@@ -1,54 +1,356 @@
 <!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ReportaGT - Admin</title>
+<title>ReportaGT - Panel de la municipalidad</title>
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="/style.css">
 </head><body>
 <header></header>
-<main>
-  <div class="tarjeta">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <h2 style="margin:0">Panel de la municipalidad</h2>
-      <button class="sec" onclick="salir()">Cerrar sesión</button>
+<main class="ancho">
+  <div class="cabecera-panel">
+    <div>
+      <h1>Panel de la municipalidad</h1>
+      <p class="ayuda" id="sesion-info">Cargando...</p>
     </div>
-    <p class="ayuda">Al cambiar el estado, el vecino recibe un correo automático.</p>
-    <div id="msg" class="msg"></div>
-    <div style="overflow-x:auto"><table>
-      <thead><tr><th>N.º</th><th>Categoría</th><th>Descripción</th><th>Ubicación</th><th>Estado</th><th>Cambiar a</th></tr></thead>
-      <tbody id="lista"></tbody>
-    </table></div>
+    <div class="acciones">
+      <span class="ayuda" id="actualizado"></span>
+      <button class="sec" id="btn-actualizar">Actualizar</button>
+      <button class="sec" id="btn-salir">Cerrar sesión</button>
+    </div>
   </div>
+
+  <div id="sesion-fin" class="msg error" role="alert" hidden>
+    <b>Tu sesión terminó.</b> Vuelve a iniciar sesión para seguir. <a href="/login.html">Ir al acceso</a>
+  </div>
+  <div id="aviso" class="msg" role="status" aria-live="polite"></div>
+  <div id="error-carga" class="msg error" role="alert" hidden>
+    No se pudieron cargar los reportes. <button class="sec" id="btn-reintentar">Reintentar</button>
+  </div>
+
+  <div class="contadores" id="contadores" role="group" aria-label="Resumen por estado"></div>
+
+  <section class="tarjeta" aria-labelledby="t-filtros">
+    <h2 id="t-filtros" class="visually-hidden" style="position:absolute;left:-9999px">Buscar y filtrar</h2>
+    <div class="barra">
+      <div style="flex:2 1 240px"><label for="f-texto">Buscar</label>
+        <input id="f-texto" type="search" placeholder="RGT-0012, descripción, dirección o nombre"></div>
+      <div><label for="f-categoria">Categoría</label><select id="f-categoria"></select></div>
+      <div><label for="f-sector">Sector</label><select id="f-sector"></select></div>
+      <div><label for="f-orden">Ordenar</label>
+        <select id="f-orden">
+          <option value="recientes">Más recientes</option>
+          <option value="antiguos">Más antiguos</option>
+          <option value="sin-atender">Sin atender hace más tiempo</option>
+        </select></div>
+    </div>
+    <fieldset style="margin:12px 0 0">
+      <legend style="font-size:.9rem">Estado</legend>
+      <div class="chips" id="f-estados"></div>
+    </fieldset>
+    <p class="ayuda" style="margin-top:12px"><span id="resultados" aria-live="polite"></span>
+      <button class="enlace" id="btn-limpiar">Limpiar filtros</button></p>
+  </section>
+
+  <section class="tarjeta">
+    <details open>
+      <summary style="cursor:pointer;font-weight:700;font-size:1.25rem;min-height:44px">Dónde atender primero</summary>
+      <p class="ayuda">Reportes sin resolver por sector y categoría. Más rojo, más urgente.</p>
+      <div id="resumen"></div>
+    </details>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-lista" style="padding:var(--e4)">
+    <h2 id="t-lista">Reportes</h2>
+    <div class="lote" id="lote" hidden>
+      <b id="lote-cuenta"></b>
+      <label for="lote-estado" style="margin:0">Cambiar a</label>
+      <select id="lote-estado"></select>
+      <button id="lote-aplicar">Cambiar estado</button>
+    </div>
+    <div id="cargando" class="vacio cargando">Cargando reportes...</div>
+    <ul class="lista" id="lista" hidden></ul>
+    <div id="vacio" class="vacio" hidden></div>
+  </section>
 </main>
+
+<!-- Panel lateral de detalle -->
+<div class="cortina" id="cortina" hidden></div>
+<aside class="lateral" id="lateral" role="dialog" aria-modal="true" aria-labelledby="det-titulo" hidden></aside>
+<!-- Foto ampliada -->
+<div class="visor" id="visor" hidden role="dialog" aria-label="Foto ampliada"><img id="visor-img" alt="Foto del reporte"></div>
+<!-- Confirmaciones -->
+<dialog id="confirmar" aria-labelledby="conf-titulo">
+  <h2 id="conf-titulo"></h2><p id="conf-texto"></p>
+  <div class="acciones"><button class="sec" id="conf-no">Cancelar</button><button id="conf-si">Confirmar</button></div>
+</dialog>
+
+<script src="/vendor/leaflet/leaflet.js"></script>
 <script src="/common.js"></script>
 <script>
 pintarNav('admin.html');
-const msg = document.getElementById('msg');
+const $ = (id) => document.getElementById(id);
 
+// ----- Estado de la pantalla -----
+let reportes = [], zonas = {}, categorias = [], sectores = [], resumen = null;
+const filtros = { texto: '', estados: new Set(), categoria: '', sector: '', orden: 'recientes' };
+const seleccionados = new Set();
+let abierto = null, mapaDetalle = null, ultimoFoco = null;
+
+const sinTildes = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// ----- Carga de datos -----
 async function cargar() {
-  const reportes = await fetch('/api/reportes').then(r => r.json());
-  document.getElementById('lista').innerHTML = reportes.map(r => `<tr>
-    <td><b>${esc(r.numero)}</b></td><td>${esc(nombreCategoria(r))}</td>
-    <td>${esc(r.descripcion)}<br><small>Vecino: ${esc(r.nombre)}</small>${r.foto ? `<img class="miniatura" src="${esc(r.foto)}" alt="foto">` : ''}</td>
-    <td>${esc(r.direccion)}<br><small>${esc(r.sector)} · <a target="_blank" href="https://www.google.com/maps?q=${r.lat},${r.lng}">mapa</a></small></td>
-    <td><span class="estado ${claseEstado(r.estado)}">${esc(r.estado)}</span></td>
-    <td>${['pendiente', 'en proceso', 'resuelto'].filter(e => e !== r.estado)
-      .map(e => `<button class="sec" onclick="cambiar(${r.id}, '${e}')">${e}</button>`).join(' ')}</td></tr>`).join('');
+  $('cargando').hidden = false; $('lista').hidden = true; $('vacio').hidden = true; $('error-carga').hidden = true;
+  try {
+    const yo = await fetch('/api/admin/yo');
+    if (yo.status === 401) return sesionTerminada();
+    const [config, datos, res] = await Promise.all([
+      fetch('/api/config').then((r) => r.json()),
+      fetch('/api/reportes').then((r) => r.json()),
+      fetch('/api/resumen').then((r) => r.json()),
+    ]);
+    $('sesion-info').innerHTML = `Conectado como <b>${esc((await yo.json()).usuario)}</b>`;
+    reportes = datos; zonas = config.zonas; categorias = config.categorias; sectores = config.sectores; resumen = res;
+    prepararFiltros();
+    $('actualizado').textContent = 'Actualizado a las ' + new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' });
+    pintar();
+  } catch (e) {
+    $('cargando').hidden = true; $('error-carga').hidden = false;
+  }
 }
 
-async function cambiar(id, estado) {
-  const r = await fetch(`/api/reportes/${id}/estado`, {
-    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) });
-  if (r.status === 401) { location.href = '/login.html'; return; }   // la sesión venció
-  const d = await r.json();
-  if (!d.ok) { msg.className = 'msg error'; msg.innerHTML = d.errores.map(esc).join('<br>'); return; }
-  msg.className = 'msg ' + (d.avisos.length ? 'aviso' : 'ok');
-  msg.textContent = `${d.numero} ahora está "${estado}". ` + (d.avisos.length ? d.avisos.join(' ') : 'Se avisó al vecino por correo.');
-  cargar();
+function sesionTerminada() {
+  $('cargando').hidden = true; $('sesion-fin').hidden = false;
+  $('sesion-fin').scrollIntoView();
+  setTimeout(() => { location.href = '/login.html'; }, 4000);
 }
-async function salir() {
-  await fetch('/api/logout', { method: 'POST' });
-  location.href = '/login.html';
+
+// ----- Filtros -----
+function prepararFiltros() {
+  const cat = $('f-categoria'), sec = $('f-sector');
+  if (cat.options.length) return;     // solo la primera vez
+  cat.innerHTML = '<option value="">Todas</option>' + categorias.map((c) => `<option>${esc(c)}</option>`).join('');
+  sec.innerHTML = '<option value="">Todos</option>' + sectores.map((s) => `<option>${esc(s)}</option>`).join('');
+  $('f-estados').innerHTML = Object.entries(ESTADOS).map(([k, e]) =>
+    `<label class="chip"><input type="checkbox" value="${k}"><span aria-hidden="true">${e.icono}</span> ${e.texto}</label>`).join('');
+  $('lote-estado').innerHTML = Object.entries(ESTADOS).map(([k, e]) => `<option value="${k}">${e.texto}</option>`).join('');
 }
+
+function reportesFiltrados() {
+  const q = sinTildes(filtros.texto.trim());
+  let lista = reportes.filter((r) =>
+    (!filtros.estados.size || filtros.estados.has(r.estado)) &&
+    (!filtros.categoria || r.categoria === filtros.categoria) &&
+    (!filtros.sector || r.sector === filtros.sector) &&
+    (!q || sinTildes([r.numero, r.descripcion, r.direccion, r.nombre, nombreCategoria(r)].join(' ')).includes(q)));
+  if (filtros.orden === 'antiguos') lista.sort((a, b) => a.id - b.id);
+  else if (filtros.orden === 'sin-atender')   // lo no resuelto primero, del más viejo al más nuevo
+    lista.sort((a, b) => (a.estado === 'resuelto') - (b.estado === 'resuelto') || new Date(a.creado_en) - new Date(b.creado_en));
+  else lista.sort((a, b) => b.id - a.id);
+  return lista;
+}
+
+const hayFiltros = () => filtros.texto || filtros.estados.size || filtros.categoria || filtros.sector || filtros.orden !== 'recientes';
+
+// ----- Pintar pantalla -----
+function pintar() {
+  // Contadores clicables
+  const cuenta = (e) => reportes.filter((r) => r.estado === e).length;
+  const cajas = [['pendiente', 'Pendientes'], ['en proceso', 'En proceso'], ['resuelto', 'Resueltos'], ['', 'Total']];
+  $('contadores').innerHTML = cajas.map(([e, t]) => {
+    const activo = e ? (filtros.estados.size === 1 && filtros.estados.has(e)) : filtros.estados.size === 0;
+    const icono = e ? ESTADOS[e].icono + ' ' : '';
+    return `<button class="contador-caja" data-estado="${e}" aria-pressed="${activo}">
+      <strong>${e ? cuenta(e) : reportes.length}</strong><span>${icono}${t}</span></button>`;
+  }).join('');
+
+  document.querySelectorAll('#f-estados input').forEach((i) => { i.checked = filtros.estados.has(i.value); });
+  $('resumen').innerHTML = resumen ? tablaCalor(resumen) : '';
+
+  const lista = reportesFiltrados();
+  $('cargando').hidden = true;
+  $('resultados').textContent = `${lista.length} ${lista.length === 1 ? 'resultado' : 'resultados'}`;
+  $('btn-limpiar').hidden = !hayFiltros();
+
+  const vacio = $('vacio');
+  if (!lista.length) {
+    $('lista').hidden = true; vacio.hidden = false;
+    vacio.innerHTML = reportes.length ? 'No hay reportes con esos filtros. <button class="enlace" id="vacio-limpiar">Limpiar filtros</button>'
+      : 'Todavía no hay reportes. Cuando los vecinos envíen alguno, aparecerá aquí.';
+  } else {
+    vacio.hidden = true; $('lista').hidden = false;
+    const todos = lista.every((r) => seleccionados.has(r.id));
+    $('lista').innerHTML = `<li class="fila encabezado-lista"><input type="checkbox" id="sel-todos" aria-label="Seleccionar todos los reportes mostrados" ${todos ? 'checked' : ''}>
+      <span></span><span>N.º</span><span>Reporte</span><span>Sector</span><span>Antigüedad</span><span>Estado</span></li>` +
+      lista.map((r) => `<li class="fila">
+        <input type="checkbox" data-sel="${r.id}" aria-label="Seleccionar ${esc(r.numero)}" ${seleccionados.has(r.id) ? 'checked' : ''}>
+        ${r.foto ? `<img class="miniatura" src="${esc(r.foto)}" alt="" loading="lazy">` : '<span></span>'}
+        <button class="abrir" data-abrir="${r.id}"><b>${esc(r.numero)}</b></button>
+        <button class="abrir" data-abrir="${r.id}"><b>${esc(nombreCategoria(r))}</b><span class="una-linea" style="display:block">${esc(r.descripcion)}</span></button>
+        <span>${esc(r.sector)}</span><span>${hace(r.creado_en)}</span><span>${insignia(r.estado)}</span></li>`).join('');
+  }
+  // Barra de lote
+  const n = [...seleccionados].filter((id) => reportes.some((r) => r.id === id)).length;
+  $('lote').hidden = n === 0;
+  $('lote-cuenta').textContent = `${n} ${n === 1 ? 'seleccionado' : 'seleccionados'}`;
+  if (abierto) pintarDetalle();
+}
+
+// ----- Eventos de filtros y lista -----
+$('f-texto').addEventListener('input', (e) => { filtros.texto = e.target.value; pintar(); });
+$('f-categoria').addEventListener('change', (e) => { filtros.categoria = e.target.value; pintar(); });
+$('f-sector').addEventListener('change', (e) => { filtros.sector = e.target.value; pintar(); });
+$('f-orden').addEventListener('change', (e) => { filtros.orden = e.target.value; pintar(); });
+$('f-estados').addEventListener('change', (e) => {
+  if (e.target.checked) filtros.estados.add(e.target.value); else filtros.estados.delete(e.target.value);
+  pintar();
+});
+function limpiar() {
+  filtros.texto = ''; filtros.estados.clear(); filtros.categoria = ''; filtros.sector = ''; filtros.orden = 'recientes';
+  $('f-texto').value = ''; $('f-categoria').value = ''; $('f-sector').value = ''; $('f-orden').value = 'recientes';
+  pintar();
+}
+$('btn-limpiar').addEventListener('click', limpiar);
+$('contadores').addEventListener('click', (e) => {
+  const caja = e.target.closest('[data-estado]'); if (!caja) return;
+  filtros.estados.clear(); if (caja.dataset.estado) filtros.estados.add(caja.dataset.estado);
+  pintar();
+});
+$('lista').addEventListener('click', (e) => {
+  const ab = e.target.closest('[data-abrir]'); if (ab) abrirDetalle(Number(ab.dataset.abrir));
+});
+$('lista').addEventListener('change', (e) => {
+  if (e.target.id === 'sel-todos') {
+    reportesFiltrados().forEach((r) => (e.target.checked ? seleccionados.add(r.id) : seleccionados.delete(r.id)));
+  } else if (e.target.dataset.sel) {
+    const id = Number(e.target.dataset.sel); if (e.target.checked) seleccionados.add(id); else seleccionados.delete(id);
+  }
+  pintar();
+});
+$('vacio').addEventListener('click', (e) => { if (e.target.id === 'vacio-limpiar') limpiar(); });
+$('btn-actualizar').addEventListener('click', cargar);
+$('btn-reintentar').addEventListener('click', cargar);
+$('btn-salir').addEventListener('click', async () => { await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html'; });
+
+// ----- Detalle en panel lateral -----
+function abrirDetalle(id) {
+  ultimoFoco = document.activeElement; abierto = id;
+  $('cortina').hidden = false; $('lateral').hidden = false;
+  pintarDetalle();
+  $('cerrar-det').focus();
+}
+function cerrarDetalle() {
+  const idCerrado = abierto; abierto = null; $('cortina').hidden = true; $('lateral').hidden = true;
+  if (mapaDetalle) { mapaDetalle.remove(); mapaDetalle = null; }
+  // El botón que abrió el detalle se vuelve a dibujar, así que se busca de nuevo para devolverle el foco
+  const boton = document.querySelector(`[data-abrir="${idCerrado}"]`) || ultimoFoco;
+  if (boton) boton.focus();
+}
+function pintarDetalle() {
+  const r = reportes.find((x) => x.id === abierto); if (!r) return cerrarDetalle();
+  $('lateral').innerHTML = `
+    <div class="cabecera-panel"><h2 id="det-titulo" style="margin:0">${esc(r.numero)}</h2>
+      <button class="sec" id="cerrar-det">Cerrar (Esc)</button></div>
+    <p>${insignia(r.estado)}</p>
+    ${r.foto ? `<button class="enlace" style="padding:0;display:block;width:100%" id="ampliar" aria-label="Ampliar la foto"><img class="foto-grande" src="${esc(r.foto)}" alt="Foto enviada por el vecino"></button>` : '<p class="ayuda">El vecino no envió foto.</p>'}
+    <h3 style="margin-top:16px">${esc(nombreCategoria(r))}</h3>
+    <p>${esc(r.descripcion)}</p>
+    <div id="mapa-detalle" aria-label="Ubicación del reporte"></div>
+    <a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">Abrir en Google Maps</a>
+    <dl class="datos">
+      <dt>Referencia</dt><dd>${esc(r.direccion)}</dd>
+      <dt>Sector</dt><dd>${esc(r.sector)}</dd>
+      <dt>Vecino</dt><dd>${esc(r.nombre)}</dd>
+      <dt>Enviado</dt><dd>${fechaHora(r.creado_en)} (${hace(r.creado_en)})</dd>
+      <dt>Actualizado</dt><dd>${fechaHora(r.actualizado_en)}</dd>
+    </dl>
+    <h3>Estado del reporte</h3>
+    <div class="segmentado" role="group" aria-label="Cambiar estado">
+      ${Object.entries(ESTADOS).map(([k, e]) => `<button data-nuevo="${k}" aria-pressed="${r.estado === k}"><span aria-hidden="true">${e.icono}</span> ${e.texto}</button>`).join('')}
+    </div>
+    <p class="ayuda">Al cambiar el estado, el vecino recibe un correo.</p>`;
+  if (mapaDetalle) mapaDetalle.remove();
+  mapaDetalle = L.map('mapa-detalle', { zoomControl: false }).setView([r.lat, r.lng], 17);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapaDetalle);
+  L.marker([r.lat, r.lng], { icon: iconoPin(r.categoria, true) }).addTo(mapaDetalle);
+}
+$('lateral').addEventListener('click', (e) => {
+  if (e.target.closest('#cerrar-det')) return cerrarDetalle();
+  if (e.target.closest('#ampliar')) { $('visor-img').src = reportes.find((x) => x.id === abierto).foto; $('visor').hidden = false; return; }
+  const b = e.target.closest('[data-nuevo]');
+  if (b) cambiarUno(abierto, b.dataset.nuevo);
+});
+$('cortina').addEventListener('click', cerrarDetalle);
+$('visor').addEventListener('click', () => { $('visor').hidden = true; });
+
+// Esc cierra lo de encima; Tab se queda dentro del panel abierto
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!$('visor').hidden) $('visor').hidden = true;
+    else if (abierto) cerrarDetalle();
+  }
+  if (e.key === 'Tab' && abierto && $('confirmar').open === false && $('visor').hidden) {
+    const f = [...$('lateral').querySelectorAll('button, a[href], input, select')].filter((x) => !x.disabled);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  }
+});
+
+// ----- Cambio de estado -----
+function confirmar(titulo, texto, boton) {
+  return new Promise((resolver) => {
+    $('conf-titulo').textContent = titulo; $('conf-texto').textContent = texto; $('conf-si').textContent = boton;
+    const d = $('confirmar');
+    const cerrar = (v) => { d.close(); $('conf-si').onclick = $('conf-no').onclick = null; resolver(v); };
+    $('conf-si').onclick = () => cerrar(true); $('conf-no').onclick = () => cerrar(false);
+    d.oncancel = () => resolver(false);
+    d.showModal();
+  });
+}
+function avisar(texto, clase) { const a = $('aviso'); a.className = 'msg ' + clase; a.textContent = texto; }
+
+// Devuelve {ok, aviso} para un reporte
+async function patchEstado(r, estado) {
+  const resp = await fetch(`/api/reportes/${r.id}/estado`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) });
+  if (resp.status === 401) { sesionTerminada(); return { ok: false, sesion: true }; }
+  const d = await resp.json();
+  if (!d.ok) return { ok: false, aviso: d.errores.join(' ') };
+  r.estado = estado; r.actualizado_en = new Date().toISOString();
+  return { ok: true, aviso: d.avisos.join(' ') };
+}
+
+async function cambiarUno(id, estado) {
+  const r = reportes.find((x) => x.id === id); if (!r || r.estado === estado) return;
+  if (estado === 'resuelto' && !(await confirmar(`¿Marcar ${r.numero} como resuelto?`, 'Se enviará un correo al vecino y no se puede deshacer.', 'Sí, resolver'))) return;
+  const res = await patchEstado(r, estado);
+  if (res.sesion) return;
+  if (!res.ok) return avisar(`No se pudo cambiar ${r.numero}: ${res.aviso}`, 'error');
+  if (res.aviso) avisar(`${r.numero} ahora está ${estado}. ${res.aviso}`, 'aviso');
+  else avisar(`${r.numero} ahora está ${estado}. Se avisó al vecino por correo.`, 'ok');
+  cargarResumen(); pintar();
+  const nuevo = $('lateral').querySelector(`[data-nuevo="${estado}"]`); if (nuevo) nuevo.focus();   // el foco no se pierde al repintar
+}
+
+$('lote-aplicar').addEventListener('click', async () => {
+  const estado = $('lote-estado').value;
+  const lista = reportes.filter((r) => seleccionados.has(r.id) && r.estado !== estado);
+  if (!lista.length) return avisar('Los reportes seleccionados ya están en ese estado.', 'aviso');
+  if (!(await confirmar(`Cambiar ${lista.length} ${lista.length === 1 ? 'reporte' : 'reportes'} a "${estado}"`,
+    `Se enviarán ${lista.length} ${lista.length === 1 ? 'correo' : 'correos'} a los vecinos. No se pueden deshacer.`, 'Cambiar y enviar'))) return;
+  let bien = 0, fallos = 0;
+  for (const r of lista) {            // uno por uno, para que cada vecino reciba su correo
+    const res = await patchEstado(r, estado);
+    if (res.sesion) return;
+    if (res.ok) bien++; else fallos++;
+  }
+  seleccionados.clear();
+  avisar(`${bien} ${bien === 1 ? 'reporte cambiado' : 'reportes cambiados'} a "${estado}".` + (fallos ? ` ${fallos} no se pudieron cambiar.` : ' Se avisó a los vecinos por correo.'), fallos ? 'aviso' : 'ok');
+  cargarResumen(); pintar();
+});
+
+async function cargarResumen() { try { resumen = await fetch('/api/resumen').then((r) => r.json()); pintar(); } catch (e) { /* se queda el anterior */ } }
+
 cargar();
 </script>
 </body></html>

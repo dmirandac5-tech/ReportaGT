@@ -7,41 +7,84 @@
 </head><body>
 <header></header>
 <main>
+  <div id="exito" class="tarjeta exito" hidden tabindex="-1">
+    <h1>¡Reporte enviado!</h1>
+    <p>Tu número de seguimiento es:</p>
+    <p class="numero-grande" id="exito-numero"></p>
+    <div class="acciones" style="justify-content:center">
+      <button id="copiar">Copiar número</button>
+      <a class="boton-enlace" id="exito-seguir" href="/seguimiento.html" style="align-self:center">Ver el estado de mi reporte</a>
+    </div>
+    <p id="exito-copiado" class="ayuda" role="status" aria-live="polite"></p>
+    <div id="exito-aviso" class="msg aviso" role="alert"></div>
+    <p class="ayuda" id="exito-correo"></p>
+    <button class="sec" id="otro-reporte">Hacer otro reporte</button>
+  </div>
+
   <form id="form" class="tarjeta" novalidate>
-    <h2>Reporta un problema de tu calle</h2>
-    <p class="ayuda">Tu reporte llegará por correo a la Municipalidad de Villa Canales con tu ubicación y foto.</p>
+    <h1>Reporta un problema de tu calle</h1>
+    <p class="ayuda">Tu reporte llegará por correo a la Municipalidad de Villa Canales con tu ubicación y foto. Los campos con * son obligatorios.</p>
 
-    <label for="categoria">Categoría</label>
-    <select id="categoria" name="categoria" required></select>
+    <fieldset>
+      <legend><span class="paso" aria-hidden="true">1</span> ¿Qué pasó?</legend>
+      <label for="categoria">Categoría *</label>
+      <select id="categoria" name="categoria" required aria-describedby="err-categoria"></select>
+      <p class="error-campo" id="err-categoria"></p>
 
-    <div id="bloque-otro" style="display:none">
-      <label for="categoria_otro">¿Cuál es el problema?</label>
-      <input id="categoria_otro" name="categoria_otro" maxlength="80" placeholder="Ej: tapadera de drenaje rota">
-    </div>
+      <div id="bloque-otro" hidden>
+        <label for="categoria_otro">¿Cuál es el problema? *</label>
+        <input id="categoria_otro" name="categoria_otro" maxlength="80" placeholder="Ej: tapadera de drenaje rota" aria-describedby="err-categoria_otro">
+        <p class="error-campo" id="err-categoria_otro"></p>
+      </div>
 
-    <label for="descripcion">Descripción corta</label>
-    <textarea id="descripcion" name="descripcion" rows="3" maxlength="500" required placeholder="Ej: bache grande que daña los carros"></textarea>
+      <label for="descripcion">Descripción corta *</label>
+      <textarea id="descripcion" name="descripcion" maxlength="500" placeholder="Ej: bache grande que daña los carros" aria-describedby="err-descripcion cont-descripcion"></textarea>
+      <p class="contador" id="cont-descripcion">0 / 500</p>
+      <p class="error-campo" id="err-descripcion"></p>
+    </fieldset>
 
-    <div class="dos">
-      <div><label for="nombre">Tu nombre</label><input id="nombre" name="nombre" maxlength="80" required></div>
-      <div><label for="email">Tu correo</label><input id="email" name="email" type="email" maxlength="120" required></div>
-    </div>
+    <fieldset>
+      <legend><span class="paso" aria-hidden="true">2</span> ¿Dónde está?</legend>
+      <div class="dos">
+        <div><label for="direccion">Dirección de referencia *</label>
+          <input id="direccion" name="direccion" maxlength="200" placeholder="Ej: frente a la tienda X" aria-describedby="err-direccion">
+          <p class="error-campo" id="err-direccion"></p></div>
+        <div><label for="sector">Sector *</label>
+          <select id="sector" name="sector" aria-describedby="err-sector"></select>
+          <p class="error-campo" id="err-sector"></p></div>
+      </div>
+      <p class="ayuda" id="ayuda-mapa">Toca el mapa para marcar el punto exacto.</p>
+      <div id="mapa" aria-label="Mapa para marcar la ubicación"></div>
+      <p class="ayuda" id="coords" role="status" aria-live="polite">Aún no marcaste un punto.</p>
+      <p class="error-campo" id="err-lat"></p>
+      <input type="hidden" name="lat" id="lat"><input type="hidden" name="lng" id="lng">
+    </fieldset>
 
-    <div class="dos">
-      <div><label for="direccion">Dirección de referencia</label>
-        <input id="direccion" name="direccion" maxlength="200" required placeholder="Ej: frente a la tienda X"></div>
-      <div><label for="sector">Sector</label><select id="sector" name="sector" required></select></div>
-    </div>
+    <fieldset>
+      <legend><span class="paso" aria-hidden="true">3</span> Tus datos</legend>
+      <div class="dos">
+        <div><label for="nombre">Tu nombre *</label>
+          <input id="nombre" name="nombre" maxlength="80" autocomplete="name" aria-describedby="err-nombre">
+          <p class="error-campo" id="err-nombre"></p></div>
+        <div><label for="email">Tu correo *</label>
+          <input id="email" name="email" type="email" maxlength="120" autocomplete="email" aria-describedby="err-email ayuda-email">
+          <p class="error-campo" id="err-email"></p></div>
+      </div>
+      <p class="ayuda" id="ayuda-email">Usamos tu correo solo para avisarte del estado de tu reporte.</p>
+    </fieldset>
 
-    <label for="foto">Foto (opcional, máx. 5 MB)</label>
-    <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp">
+    <fieldset>
+      <legend><span class="paso" aria-hidden="true">4</span> Foto (opcional)</legend>
+      <label for="foto">Agrega una foto, máximo 5 MB</label>
+      <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="err-foto">
+      <p class="error-campo" id="err-foto"></p>
+      <div class="vista-previa" id="vista-previa" hidden>
+        <img id="vista-img" alt="Vista previa de tu foto">
+        <button type="button" class="sec" id="quitar-foto">Quitar foto</button>
+      </div>
+    </fieldset>
 
-    <label>Ubicación: haz clic en el mapa para marcar el punto</label>
-    <div id="mapa"></div>
-    <p class="ayuda" id="coords">Aún no marcaste un punto.</p>
-    <input type="hidden" name="lat" id="lat"><input type="hidden" name="lng" id="lng">
-
-    <div id="msg" class="msg"></div>
+    <div id="msg" class="msg" role="alert"></div>
     <button type="submit" id="enviar">Enviar reporte</button>
   </form>
 </main>
@@ -49,68 +92,127 @@
 <script src="/common.js"></script>
 <script>
 pintarNav('index.html');
+const $ = (id) => document.getElementById(id);
 
-// Llenar los selects con la configuración del servidor
+// ----- Selects con la configuración del servidor -----
 let zonas = {};
-fetch('/api/config').then(r => r.json()).then(c => {
+fetch('/api/config').then((r) => r.json()).then((c) => {
   zonas = c.zonas;
-  document.getElementById('categoria').innerHTML = '<option value="">Elige...</option>' + c.categorias.map(x => `<option>${esc(x)}</option>`).join('');
-  document.getElementById('sector').innerHTML = '<option value="">Elige...</option>' + c.sectores.map(x => `<option>${esc(x)}</option>`).join('');
+  $('categoria').innerHTML = '<option value="">Elige una categoría</option>' + c.categorias.map((x) => `<option>${esc(x)}</option>`).join('');
+  $('sector').innerHTML = '<option value="">Elige un sector</option>' + c.sectores.map((x) => `<option>${esc(x)}</option>`).join('');
 });
 
-// Si elige "Otro", aparece el campo para escribir cuál es el problema
-document.getElementById('categoria').addEventListener('change', (e) => {
+// ----- Validación en línea (mismas reglas que el servidor) -----
+const reglas = {
+  categoria: (v) => (v ? '' : 'Elige una categoría.'),
+  categoria_otro: (v) => ($('categoria').value !== 'Otro' ? '' : v.trim().length < 3 ? 'Cuéntanos cuál es el problema (mínimo 3 letras).' : ''),
+  descripcion: (v) => (v.trim().length < 5 ? 'Escribe al menos 5 caracteres.' : ''),
+  direccion: (v) => (v.trim().length < 3 ? 'Escribe una referencia, por ejemplo "frente a la tienda X".' : ''),
+  sector: (v) => (v ? '' : 'Elige un sector.'),
+  nombre: (v) => (v.trim().length < 2 ? 'Escribe tu nombre.' : ''),
+  email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? '' : 'Escribe un correo válido, como nombre@correo.com.'),
+};
+function validar(campo) {
+  const el = $(campo), msg = reglas[campo](el.value);
+  $('err-' + campo).textContent = msg;
+  el.setAttribute('aria-invalid', msg ? 'true' : 'false');
+  return !msg;
+}
+Object.keys(reglas).forEach((c) => {
+  $(c).addEventListener('blur', () => validar(c));                    // al salir del campo
+  $(c).addEventListener('input', () => { if ($(c).getAttribute('aria-invalid') === 'true') validar(c); });  // y mientras corrige
+  $(c).addEventListener('change', () => validar(c));
+});
+
+// Contador de caracteres
+$('descripcion').addEventListener('input', (e) => { $('cont-descripcion').textContent = `${e.target.value.length} / 500`; });
+
+// "Otro": aparece el campo para escribir cuál es el problema
+$('categoria').addEventListener('change', (e) => {
   const esOtro = e.target.value === 'Otro';
-  document.getElementById('bloque-otro').style.display = esOtro ? 'block' : 'none';
-  document.getElementById('categoria_otro').required = esOtro;
-  if (!esOtro) document.getElementById('categoria_otro').value = '';
+  $('bloque-otro').hidden = !esOtro;
+  if (!esOtro) { $('categoria_otro').value = ''; $('err-categoria_otro').textContent = ''; }
 });
 
-// Mapa con un solo marcador que se mueve con cada clic
+// ----- Mapa: un marcador que se mueve con cada clic -----
 const mapa = crearMapa('mapa');
 let marcador = null;
 mapa.on('click', (e) => {
   const { lat, lng } = e.latlng;
   if (marcador) marcador.setLatLng(e.latlng); else marcador = L.marker(e.latlng).addTo(mapa);
-  document.getElementById('lat').value = lat.toFixed(6);
-  document.getElementById('lng').value = lng.toFixed(6);
+  $('lat').value = lat.toFixed(6); $('lng').value = lng.toFixed(6);
+  $('err-lat').textContent = '';
   // Detectar el sector automáticamente (se puede cambiar a mano en el selector)
   const sector = sectorDe(zonas, lat, lng);
-  if (sector) document.getElementById('sector').value = sector;
-  document.getElementById('coords').textContent = `Punto marcado: ${lat.toFixed(6)}, ${lng.toFixed(6)}` +
-    (sector ? ` · ${sector}` : '');
+  if (sector) { $('sector').value = sector; validar('sector'); }
+  $('coords').textContent = `Punto marcado: ${lat.toFixed(6)}, ${lng.toFixed(6)}` + (sector ? ` · ${sector}` : '');
 });
+$('sector').addEventListener('change', (e) => { if (zonas[e.target.value]) volarASector(mapa, zonas, e.target.value); });
 
-// Al elegir un sector, el mapa se acerca a esa zona para marcar el punto más fácil
-document.getElementById('sector').addEventListener('change', (e) => {
-  if (zonas[e.target.value]) volarASector(mapa, zonas, e.target.value);
+// ----- Foto: vista previa y botón para quitarla -----
+$('foto').addEventListener('change', (e) => {
+  const f = e.target.files[0]; $('err-foto').textContent = '';
+  if (!f) return quitarFoto();
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) { $('err-foto').textContent = 'La foto debe ser JPG, PNG o WEBP.'; return quitarFoto(); }
+  if (f.size > 5 * 1024 * 1024) { $('err-foto').textContent = 'La foto pesa más de 5 MB.'; return quitarFoto(); }
+  $('vista-img').src = URL.createObjectURL(f); $('vista-previa').hidden = false;
 });
+function quitarFoto() { $('foto').value = ''; $('vista-previa').hidden = true; $('vista-img').removeAttribute('src'); }
+$('quitar-foto').addEventListener('click', () => { quitarFoto(); $('foto').focus(); });
 
-const msg = document.getElementById('msg');
+// ----- Envío -----
+const msg = $('msg');
 const mostrar = (clase, html) => { msg.className = 'msg ' + clase; msg.innerHTML = html; };
 
-document.getElementById('form').addEventListener('submit', async (ev) => {
+$('form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
-  const boton = document.getElementById('enviar');
-  boton.disabled = true; boton.textContent = 'Enviando...';
+  const malos = Object.keys(reglas).filter((c) => !validar(c));
+  if (!$('lat').value) { $('err-lat').textContent = 'Marca el punto en el mapa.'; malos.push('lat'); }
+  if (malos.length) {
+    mostrar('error', 'Revisa los campos marcados en rojo.');
+    const primero = malos[0] === 'lat' ? $('mapa') : $(malos[0]);
+    primero.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (primero.focus) primero.focus();
+    return;
+  }
+  mostrar('', '');
+  const boton = $('enviar');
+  boton.disabled = true; boton.textContent = 'Enviando...';   // bloqueado mientras se envía
   try {
     const r = await fetch('/api/reportes', { method: 'POST', body: new FormData(ev.target) });
     const datos = await r.json();
     if (!datos.ok) { mostrar('error', datos.errores.map(esc).join('<br>')); return; }
-    // Reporte guardado; si algún correo falló, se avisa pero el reporte existe
-    mostrar(datos.avisos.length ? 'aviso' : 'ok',
-      `<b>¡Reporte enviado! Tu número de seguimiento es ${esc(datos.numero)}.</b>` +
-      (datos.avisos.length ? '<br>Atención: ' + datos.avisos.map(esc).join(' ') + ' Tu reporte sí quedó guardado.' : '<br>Te enviamos una confirmación por correo.'));
-    ev.target.reset();
-    document.getElementById('bloque-otro').style.display = 'none';
-    if (marcador) { marcador.remove(); marcador = null; }
-    document.getElementById('coords').textContent = 'Aún no marcaste un punto.';
-    msg.scrollIntoView({ behavior: 'smooth' });
+    pantallaExito(datos);
   } catch (e) {
     mostrar('error', 'No se pudo conectar con el servidor. Intenta de nuevo.');
   } finally {
     boton.disabled = false; boton.textContent = 'Enviar reporte';
   }
+});
+
+// ----- Pantalla de éxito -----
+function pantallaExito(datos) {
+  $('form').hidden = true; $('exito').hidden = false;
+  $('exito-numero').textContent = datos.numero;
+  $('exito-seguir').href = '/seguimiento.html?n=' + encodeURIComponent(datos.numero);
+  const hayAvisos = datos.avisos.length > 0;
+  $('exito-aviso').hidden = !hayAvisos;
+  $('exito-aviso').textContent = hayAvisos ? datos.avisos.join(' ') + ' Tu reporte sí quedó guardado.' : '';
+  $('exito-correo').textContent = hayAvisos ? '' : 'Te enviamos una confirmación por correo.';
+  $('exito').focus(); $('exito').scrollIntoView();
+}
+$('copiar').addEventListener('click', async () => {
+  const n = $('exito-numero').textContent;
+  try { await navigator.clipboard.writeText(n); $('exito-copiado').textContent = 'Número copiado.'; }
+  catch (e) { $('exito-copiado').textContent = 'No se pudo copiar. Anótalo: ' + n; }
+});
+$('otro-reporte').addEventListener('click', () => {
+  $('form').reset(); quitarFoto();
+  if (marcador) { marcador.remove(); marcador = null; }
+  $('coords').textContent = 'Aún no marcaste un punto.'; $('cont-descripcion').textContent = '0 / 500';
+  $('bloque-otro').hidden = true; mostrar('', '');
+  document.querySelectorAll('[aria-invalid]').forEach((e) => e.removeAttribute('aria-invalid'));
+  document.querySelectorAll('.error-campo').forEach((e) => { e.textContent = ''; });
+  $('exito').hidden = true; $('form').hidden = false; mapa.invalidateSize(); window.scrollTo(0, 0);
 });
 </script>
 </body></html>
