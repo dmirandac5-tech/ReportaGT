@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reportagt
+  namespace: dmirandac5
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - dmirandac5-reportagt.duckdns.org
+      secretName: reportagt-tls
+  rules:
+    - host: dmirandac5-reportagt.duckdns.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: reportagt
+                port:
+                  number: 80
