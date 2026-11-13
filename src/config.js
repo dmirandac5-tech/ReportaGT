@@ -38,7 +38,8 @@ module.exports = {
     pass: process.env.SMTP_PASS || '',
   },
   // Catálogo de categorías del prototipo (solo problemas de la calle). "Otro" deja que el vecino escriba cuál es.
-  categorias: ['Bache', 'Basura en la calle', 'Alumbrado público dañado', 'Calle sin pavimentar', 'Otro'],
+  categorias: ['Bache', 'Basura en la calle', 'Alumbrado público dañado', 'Calle sin pavimentar',
+    'Vehículo abandonado o dañado', 'Tragante tapado', 'Otro'],
   estados: ['pendiente', 'en proceso', 'resuelto'],
   zonas,
   sectores: Object.keys(zonas),

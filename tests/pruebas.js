@@ -56,7 +56,7 @@ async function main() {
     console.log('Reportes y validación');
     await prueba('la configuración trae 5 categorías (incluye Otro) y 6 sectores con zonas', async () => {
       const c = await json('/api/config').then((r) => r.json());
-      igual(c.categorias.length, 5); cierto(c.categorias.includes('Otro'), 'falta Otro'); igual(c.sectores.length, 6); igual(Object.keys(c.zonas).length, 6);
+      igual(c.categorias.length, 7); cierto(c.categorias.includes('Otro'), 'falta Otro'); igual(c.sectores.length, 6); igual(Object.keys(c.zonas).length, 6);
     });
     await prueba('datos inválidos devuelven 400 con errores claros', async () => {
       const r = await json('/api/reportes', { method: 'POST', body: formulario({ categoria: 'Robo', email: 'x', lat: '' }) });

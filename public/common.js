@@ -9,6 +9,8 @@ const COLORES = {
   'Basura en la calle': '#7d6608',
   'Alumbrado público dañado': '#f1c40f',
   'Calle sin pavimentar': '#8e44ad',
+  'Vehículo abandonado o dañado': '#c0392b',
+  'Tragante tapado': '#2980b9',
   'Otro': '#7f8c8d',
 };
 
