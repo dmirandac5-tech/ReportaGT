@@ -10,7 +10,7 @@ if [ ! -f .env ]; then
 fi
 
 TMP=$(mktemp)
-grep -v '^#' .env | grep -v '^$' | grep -v '^BASE_URL=' > "$TMP"
+grep -v '^#' .env | grep -v '^$' | grep -v '^BASE_URL=' | sed -E 's/^([A-Za-z_]+)="(.*)"$/\1=\2/' > "$TMP"
 echo "BASE_URL=http://localhost:8080" >> "$TMP"
 
 kubectl create namespace reportagt --dry-run=client -o yaml | kubectl apply -f -

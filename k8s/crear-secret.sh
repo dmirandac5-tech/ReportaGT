@@ -11,7 +11,7 @@ fi
 
 DOMINIO="${1:-dmirandac5-reportagt.duckdns.org}"
 TMP=$(mktemp)
-grep -v '^#' .env | grep -v '^$' | grep -v '^BASE_URL=' > "$TMP"
+grep -v '^#' .env | grep -v '^$' | grep -v '^BASE_URL=' | sed -E 's/^([A-Za-z_]+)="(.*)"$/\1=\2/' > "$TMP"
 echo "BASE_URL=https://${DOMINIO}" >> "$TMP"
 
 kubectl create secret generic reportagt-secrets -n dmirandac5 \
