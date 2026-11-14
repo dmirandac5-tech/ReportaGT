@@ -40,7 +40,8 @@ small, .ayuda { color: var(--texto-suave); }
 header { background: #fff; border-bottom: 4px solid var(--marino); padding: var(--e2) var(--e5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e5); }
 .logo { display: inline-flex; align-items: center; min-height: 44px; border-radius: var(--radio); }
 .logo img { height: 36px; width: auto; display: block; }
-nav { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e4); }
+nav { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e4); flex: 1; }
+nav a.nav-muni { margin-left: auto; }   /* el acceso de la muni va al extremo derecho */
 nav a { color: var(--marino); text-decoration: none; padding: var(--e2) 0; min-height: 44px; display: inline-flex; align-items: center; border-bottom: 3px solid transparent; font-weight: 600; }
 nav a[aria-current="page"], nav a:hover { border-bottom-color: var(--verde); }
 .logo-pagina { display: block; height: 32px; width: auto; margin: 0 auto var(--e4); }
@@ -68,7 +69,8 @@ button:hover:not(:disabled) { background: var(--primario-oscuro); }
 button:disabled { opacity: .6; cursor: not-allowed; }
 button.sec { background: #fff; color: var(--primario); }
 button.sec:hover:not(:disabled) { background: var(--fondo); }
-button.peligro { background: var(--error); border-color: var(--error); }
+button.peligro, button.rojo { background: var(--error); border-color: var(--error); }
+button.rojo:hover:not(:disabled) { background: #8f1c13; border-color: #8f1c13; }
 button.enlace { background: none; border: 0; color: var(--primario); text-decoration: underline; padding: var(--e2); min-height: 44px; }
 
 /* Mensajes */

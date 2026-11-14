@@ -28,6 +28,8 @@ module.exports = {
   adminPass: process.env.ADMIN_PASS || '',
   // Secreto para firmar la cookie de sesión; si falta, se genera uno al arrancar (las sesiones se cierran al reiniciar)
   sessionSecret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
+  // Comprobar por DNS que el dominio del correo del vecino exista (las pruebas automáticas lo apagan)
+  verificarDominioCorreo: process.env.VERIFICAR_DOMINIO_CORREO !== 'false',
   muniEmail: process.env.MUNI_EMAIL || 'muni@villacanales.test',
   mailFrom: process.env.MAIL_FROM || 'ReportaGT <reportagt@villacanales.test>',
   smtp: {

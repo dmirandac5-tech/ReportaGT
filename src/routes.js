@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const dns = require('dns').promises;
 const config = require('./config');
 const { db, numeroReporte } = require('./db');
 const mailer = require('./mailer');
@@ -77,6 +78,15 @@ router.post('/reportes', (req, res, next) => {
   upload.single('foto')(req, res, (err) => (err ? next(err) : crear(req, res)));
 });
 
+// ¿El dominio del correo existe y recibe correos? Consulta sus registros MX.
+// Si el DNS no responde en 3 segundos no se bloquea al vecino: solo se rechaza cuando el dominio no existe.
+function dominioRecibeCorreo(email) {
+  const consulta = dns.resolveMx(email.split('@')[1])
+    .then((mx) => mx.some((m) => m.exchange))
+    .catch((e) => !['ENOTFOUND', 'ENODATA'].includes(e.code));
+  return Promise.race([consulta, new Promise((ok) => setTimeout(() => ok(true), 3000))]);
+}
+
 async function crear(req, res) {
   const { categoria, descripcion, nombre, email, direccion, sector } = req.body;
   const otro = (req.body.categoria_otro || '').trim();
@@ -89,13 +99,19 @@ async function crear(req, res) {
   // Si elige "Otro", debe decir cuál es el problema
   if (categoria === 'Otro' && (otro.length < 3 || otro.length > 80)) errores.push('Escribe cuál es el problema (entre 3 y 80 caracteres).');
   if (!descripcion || descripcion.trim().length < 5 || descripcion.length > 500) errores.push('La descripción debe tener entre 5 y 500 caracteres.');
-  if (!nombre || nombre.trim().length < 2 || nombre.length > 80) errores.push('Escribe tu nombre.');
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) errores.push('Escribe un correo válido.');
+  // Nombre y apellido, solo letras (no se puede comprobar la identidad, pero sí descartar texto que no es un nombre)
+  if (!nombre || nombre.length > 80 || !/^[\p{L}'’.-]{2,}(\s+[\p{L}'’.-]{2,})+$/u.test(nombre.trim())) errores.push('Escribe tu nombre y apellido, solo con letras.');
+  const correoBienEscrito = !!email && email.length <= 120 && /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(email.trim());
+  if (!correoBienEscrito) errores.push('Escribe un correo válido.');
+  if (!req.file) errores.push('Agrega una foto del problema.');
   if (!direccion || direccion.trim().length < 3 || direccion.length > 200) errores.push('Escribe una dirección de referencia.');
   if (!config.sectores.includes(sector)) errores.push('Elige un sector.');
   // El rango es solo un chequeo básico de que el punto esté en Guatemala
   if (!(lat >= 13.5 && lat <= 18 && lng >= -92.5 && lng <= -88)) errores.push('Marca la ubicación en el mapa.');
   if (errores.length) return res.status(400).json({ ok: false, errores });
+  if (config.verificarDominioCorreo && !(await dominioRecibeCorreo(email.trim()))) {
+    return res.status(400).json({ ok: false, errores: ['El dominio de ese correo no existe o no recibe correos. Revisa que esté bien escrito.'] });
+  }
 
   // 2) Guardar en SQLite (el reporte queda guardado aunque falle el correo)
   const ahora = new Date().toISOString();

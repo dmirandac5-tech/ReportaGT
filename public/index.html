@@ -64,7 +64,7 @@
     <fieldset>
       <legend><span class="paso" aria-hidden="true">3</span> Tus datos</legend>
       <div class="dos">
-        <div><label for="nombre">Tu nombre *</label>
+        <div><label for="nombre">Tu nombre y apellido *</label>
           <input id="nombre" name="nombre" maxlength="80" autocomplete="name" aria-describedby="err-nombre">
           <p class="error-campo" id="err-nombre"></p></div>
         <div><label for="email">Tu correo *</label>
@@ -75,8 +75,8 @@
     </fieldset>
 
     <fieldset>
-      <legend><span class="paso" aria-hidden="true">4</span> Foto (opcional)</legend>
-      <p class="ayuda" id="foto-ayuda">Agrega una foto del problema. Si pesa mucho, se reduce sola antes de enviarse.</p>
+      <legend><span class="paso" aria-hidden="true">4</span> Foto *</legend>
+      <p class="ayuda" id="foto-ayuda">La foto del problema es obligatoria. Si pesa mucho, se reduce sola antes de enviarse.</p>
       <div class="botones-foto">
         <button type="button" id="btn-camara" hidden aria-describedby="foto-ayuda err-foto">Tomar foto</button>
         <button type="button" class="sec" id="btn-galeria" aria-describedby="foto-ayuda err-foto">Elegir una foto</button>
@@ -91,7 +91,7 @@
     </fieldset>
 
     <div id="msg" class="msg" role="alert"></div>
-    <button type="submit" id="enviar">Enviar reporte</button>
+    <button type="submit" id="enviar" class="rojo">Enviar reporte</button>
   </form>
 </main>
 <script src="/vendor/leaflet/leaflet.js"></script>
@@ -115,8 +115,8 @@ const reglas = {
   descripcion: (v) => (v.trim().length < 5 ? 'Escribe al menos 5 caracteres.' : ''),
   direccion: (v) => (v.trim().length < 3 ? 'Escribe una referencia, por ejemplo "frente a la tienda X".' : ''),
   sector: (v) => (v ? '' : 'Elige un sector.'),
-  nombre: (v) => (v.trim().length < 2 ? 'Escribe tu nombre.' : ''),
-  email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? '' : 'Escribe un correo válido, como nombre@correo.com.'),
+  nombre: (v) => (/^[\p{L}'’.-]{2,}(\s+[\p{L}'’.-]{2,})+$/u.test(v.trim()) ? '' : 'Escribe tu nombre y apellido, solo con letras.'),
+  email: (v) => (/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(v.trim()) ? '' : 'Escribe un correo válido, como nombre@correo.com.'),
 };
 function validar(campo) {
   const el = $(campo), msg = reglas[campo](el.value);
@@ -207,9 +207,10 @@ $('form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const malos = Object.keys(reglas).filter((c) => !validar(c));
   if (!$('lat').value) { $('err-lat').textContent = 'Marca el punto en el mapa.'; malos.push('lat'); }
+  if (!fotoLista) { $('err-foto').textContent = 'Agrega una foto del problema.'; malos.push('foto'); }
   if (malos.length) {
     mostrar('error', 'Revisa los campos marcados en rojo.');
-    const primero = malos[0] === 'lat' ? $('mapa') : $(malos[0]);
+    const primero = malos[0] === 'lat' ? $('mapa') : malos[0] === 'foto' ? $('btn-galeria') : $(malos[0]);
     primero.scrollIntoView({ behavior: 'smooth', block: 'center' }); if (primero.focus) primero.focus();
     return;
   }

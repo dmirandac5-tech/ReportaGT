@@ -87,7 +87,7 @@ En `.env` cambia `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`
 ## API
 | Método | Ruta | Qué hace |
 |---|---|---|
-| POST | `/api/reportes` | Crea reporte (multipart, foto opcional) y manda 2 correos |
+| POST | `/api/reportes` | Crea reporte (multipart, foto obligatoria) y manda 2 correos |
 | GET | `/api/reportes` | Lista de reportes |
 | PATCH | `/api/reportes/:id/estado` | Cambia estado y avisa al vecino |
 | GET | `/api/resumen` | Conteo por sector y categoría (sin resolver) |

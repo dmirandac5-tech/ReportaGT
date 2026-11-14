@@ -27,8 +27,11 @@ const json = (ruta, opciones = {}) => fetch(BASE + ruta, { redirect: 'manual', .
 const enviarJson = (ruta, metodo, cuerpo, cookie) => json(ruta, {
   method: metodo, headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(cuerpo) });
 
-function formulario(extra = {}) {
+// PNG de 1x1 píxel: la foto es obligatoria en cada reporte
+const FOTO = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+function formulario(extra = {}, conFoto = true) {
   const f = new FormData();
+  if (conFoto) f.append('foto', new Blob([FOTO], { type: 'image/png' }), 'foto.png');
   Object.entries({ categoria: 'Bache', descripcion: 'Bache grande frente a la tienda', nombre: 'Vecino de Prueba', email: VECINO,
     direccion: 'Frente a la tienda X', sector: 'Sector 2', lat: '14.5481', lng: '-90.5262', ...extra }).forEach(([k, v]) => f.append(k, v));
   return f;
@@ -48,19 +51,23 @@ async function main() {
   // Servidor de pruebas aislado (SMTP siempre a Mailpit local, nunca a un Gmail real)
   const servidor = spawn('node', ['server.js'], { cwd: path.join(__dirname, '..'), env: { ...process.env,
     PORT: PUERTO, DB_FILE: dbTemporal, MUNI_EMAIL: MUNI, SMTP_HOST: 'localhost', SMTP_PORT: '1025', SMTP_SECURE: 'false',
-    SMTP_USER: '', SMTP_PASS: '', ADMIN_USER: ADMIN.usuario, ADMIN_PASS: ADMIN.clave, SESSION_SECRET: 'secreto-de-prueba' }, stdio: 'ignore' });
+    SMTP_USER: '', SMTP_PASS: '', VERIFICAR_DOMINIO_CORREO: 'false', ADMIN_USER: ADMIN.usuario, ADMIN_PASS: ADMIN.clave, SESSION_SECRET: 'secreto-de-prueba' }, stdio: 'ignore' });
   try {
     for (let i = 0; i < 30; i++) { try { await fetch(BASE + '/api/config'); break; } catch (e) { await new Promise((ok) => setTimeout(ok, 200)); } }
     console.log(`Servidor de pruebas en ${BASE} (base temporal)\n`);
 
     console.log('Reportes y validación');
-    await prueba('la configuración trae 5 categorías (incluye Otro) y 6 sectores con zonas', async () => {
+    await prueba('la configuración trae 7 categorías (incluye Otro) y 6 sectores con zonas', async () => {
       const c = await json('/api/config').then((r) => r.json());
       igual(c.categorias.length, 7); cierto(c.categorias.includes('Otro'), 'falta Otro'); igual(c.sectores.length, 6); igual(Object.keys(c.zonas).length, 6);
     });
     await prueba('datos inválidos devuelven 400 con errores claros', async () => {
       const r = await json('/api/reportes', { method: 'POST', body: formulario({ categoria: 'Robo', email: 'x', lat: '' }) });
       igual(r.status, 400); cierto((await r.json()).errores.length >= 3, 'faltan mensajes de error');
+    });
+    await prueba('sin foto, o con un nombre que no es nombre y apellido, se rechaza', async () => {
+      igual((await json('/api/reportes', { method: 'POST', body: formulario({}, false) })).status, 400);
+      igual((await json('/api/reportes', { method: 'POST', body: formulario({ nombre: 'Juan123' }) })).status, 400);
     });
     await prueba('"Otro" sin explicar el problema se rechaza', async () => {
       igual((await json('/api/reportes', { method: 'POST', body: formulario({ categoria: 'Otro' }) })).status, 400);
