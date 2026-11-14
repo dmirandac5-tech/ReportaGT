@@ -188,4 +188,33 @@ dialog::backdrop { background: rgba(0, 0, 0, .4); }
 /* Enlace con aspecto de botón */
 .boton-enlace { display: inline-flex; align-items: center; min-height: 44px; padding: var(--e2) var(--e4); border: 1px solid var(--primario); border-radius: var(--radio); background: #fff; color: var(--primario); font-weight: 600; text-decoration: none; }
 .boton-enlace:hover { background: var(--fondo); }
+/* Formulario por pasos: indicador de avance y transición entre etapas */
+.progreso-caja { position: relative; margin: var(--e4) 0 var(--e5); }
+.progreso-riel { position: absolute; top: 14px; left: 12.5%; right: 12.5%; height: 4px; border-radius: 2px; background: var(--borde); }
+.progreso-riel i { display: block; height: 100%; width: 0; border-radius: 2px; background: var(--primario); transition: width .35s ease; }
+.progreso { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); position: relative; }
+.progreso li { display: flex; flex-direction: column; align-items: center; gap: var(--e1); font-size: .85rem; color: var(--texto-suave); text-align: center; }
+.progreso li span { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2px solid var(--borde); font-weight: 700; transition: background .25s, border-color .25s, color .25s, transform .25s; }
+.progreso li.activo { color: var(--marino); font-weight: 700; }
+.progreso li.activo span { border-color: var(--primario); color: var(--primario); transform: scale(1.15); }
+.progreso li.hecho span { background: var(--primario); border-color: var(--primario); color: #fff; }
+#form fieldset.entra-der { animation: entra-der .28s ease both; }
+#form fieldset.entra-izq { animation: entra-izq .28s ease both; }
+@keyframes entra-der { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes entra-izq { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+legend:focus { outline: none; }
+.acciones-pasos { display: flex; gap: var(--e2); margin-top: var(--e4); }
+.acciones-pasos #siguiente, .acciones-pasos #enviar { margin-left: auto; min-width: 9rem; }
+button:active:not(:disabled) { transform: scale(.97); }
+.exito:not([hidden]) { animation: aparece .35s ease both; }
+.exito .numero-grande { animation: salta .45s .15s ease both; }
+@keyframes aparece { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes salta { 0% { opacity: 0; transform: scale(.6); } 70% { transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+/* Quien pidió menos movimiento en su sistema ve los cambios sin animación */
+@media (prefers-reduced-motion: reduce) {
+  #form fieldset, .exito, .exito .numero-grande { animation: none !important; }
+  .progreso-riel i, .progreso li span { transition: none; }
+  button:active:not(:disabled) { transform: none; }
+}
+
 [hidden] { display: none !important; }
