@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node src/seed.js",
-    "test": "node tests/pruebas.js"
+    "test": "node tests/pruebas.js",
+    "verificar": "node tests/verificar-produccion.js",
+    "resiliencia": "node tests/verificar-produccion.js --resiliencia"
   },
   "license": "MIT",
   "private": true,
