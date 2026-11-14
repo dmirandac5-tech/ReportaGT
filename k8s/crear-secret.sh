@@ -9,7 +9,7 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-DOMINIO="${1:-dmirandac5-reportagt.duckdns.org}"
+DOMINIO="${1:-reportagt.duckdns.org}"
 TMP=$(mktemp)
 grep -v '^#' .env | grep -v '^$' | grep -v '^BASE_URL=' | sed -E 's/^([A-Za-z_]+)="(.*)"$/\1=\2/' > "$TMP"
 echo "BASE_URL=https://${DOMINIO}" >> "$TMP"

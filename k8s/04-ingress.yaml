@@ -7,13 +7,16 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt
 spec:
   ingressClassName: traefik
+  # Dominio principal: reportagt.duckdns.org
+  # Se conserva el anterior para que sigan funcionando los enlaces ya compartidos (PDF, correos)
   tls:
     - hosts:
+        - reportagt.duckdns.org
         - dmirandac5-reportagt.duckdns.org
       secretName: reportagt-tls
   rules:
-    - host: dmirandac5-reportagt.duckdns.org
-      http:
+    - host: reportagt.duckdns.org
+      http: &ruta
         paths:
           - path: /
             pathType: Prefix
@@ -22,3 +25,5 @@ spec:
                 name: reportagt
                 port:
                   number: 80
+    - host: dmirandac5-reportagt.duckdns.org
+      http: *ruta
