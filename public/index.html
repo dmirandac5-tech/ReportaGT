@@ -76,8 +76,13 @@
 
     <fieldset>
       <legend><span class="paso" aria-hidden="true">4</span> Foto (opcional)</legend>
-      <label for="foto">Agrega una foto, máximo 5 MB</label>
-      <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="err-foto">
+      <p class="ayuda" id="foto-ayuda">Agrega una foto del problema. Si pesa mucho, se reduce sola antes de enviarse.</p>
+      <div class="botones-foto">
+        <button type="button" id="btn-camara" hidden aria-describedby="foto-ayuda err-foto">Tomar foto</button>
+        <button type="button" class="sec" id="btn-galeria" aria-describedby="foto-ayuda err-foto">Elegir una foto</button>
+      </div>
+      <input id="foto-camara" type="file" accept="image/*" capture="environment" hidden>
+      <input id="foto" type="file" accept="image/*" hidden>
       <p class="error-campo" id="err-foto"></p>
       <div class="vista-previa" id="vista-previa" hidden>
         <img id="vista-img" alt="Vista previa de tu foto">
@@ -150,16 +155,49 @@ mapa.on('click', (e) => {
 });
 $('sector').addEventListener('change', (e) => { if (zonas[e.target.value]) volarASector(mapa, zonas, e.target.value); });
 
-// ----- Foto: vista previa y botón para quitarla -----
-$('foto').addEventListener('change', (e) => {
-  const f = e.target.files[0]; $('err-foto').textContent = '';
-  if (!f) return quitarFoto();
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) { $('err-foto').textContent = 'La foto debe ser JPG, PNG o WEBP.'; return quitarFoto(); }
-  if (f.size > 5 * 1024 * 1024) { $('err-foto').textContent = 'La foto pesa más de 5 MB.'; return quitarFoto(); }
-  $('vista-img').src = URL.createObjectURL(f); $('vista-previa').hidden = false;
-});
-function quitarFoto() { $('foto').value = ''; $('vista-previa').hidden = true; $('vista-img').removeAttribute('src'); }
-$('quitar-foto').addEventListener('click', () => { quitarFoto(); $('foto').focus(); });
+// ----- Foto: tomarla con la cámara (en celular) o elegirla; se reduce antes de enviar -----
+let fotoLista = null;   // la imagen ya reducida que viaja con el reporte
+// El botón de cámara solo se muestra en pantallas táctiles (celular o tableta)
+if (window.matchMedia('(pointer: coarse)').matches) $('btn-camara').hidden = false;
+$('btn-camara').addEventListener('click', () => $('foto-camara').click());
+$('btn-galeria').addEventListener('click', () => $('foto').click());
+['foto', 'foto-camara'].forEach((id) => $(id).addEventListener('change', (e) => prepararFoto(e.target.files[0])));
+
+// Reduce la foto a 1600 px por lado como máximo y la pasa a JPG.
+// Las fotos de celular pesan mucho; así caben en el límite y además pierden sus metadatos (GPS, modelo del teléfono).
+function reducir(archivo) {
+  return new Promise((ok, falla) => {
+    const img = new Image();
+    img.onload = () => {
+      const escala = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      const lienzo = document.createElement('canvas');
+      lienzo.width = Math.round(img.naturalWidth * escala);
+      lienzo.height = Math.round(img.naturalHeight * escala);
+      lienzo.getContext('2d').drawImage(img, 0, 0, lienzo.width, lienzo.height);
+      URL.revokeObjectURL(img.src);
+      lienzo.toBlob((b) => (b ? ok(b) : falla(new Error('sin imagen'))), 'image/jpeg', 0.82);
+    };
+    img.onerror = () => falla(new Error('no es una imagen'));
+    img.src = URL.createObjectURL(archivo);
+  });
+}
+
+async function prepararFoto(f) {
+  if (!f) return;                       // cerró la cámara o el selector sin elegir: se conserva la foto anterior
+  $('err-foto').textContent = '';
+  if (!f.type.startsWith('image/')) { quitarFoto(); $('err-foto').textContent = 'El archivo debe ser una foto.'; return; }
+  let lista;
+  try { lista = await reducir(f); }
+  catch (e) { quitarFoto(); $('err-foto').textContent = 'No se pudo leer la foto. Prueba con otra en JPG o PNG.'; return; }
+  if (lista.size > 5 * 1024 * 1024) { quitarFoto(); $('err-foto').textContent = 'La foto pesa más de 5 MB.'; return; }
+  fotoLista = lista;
+  $('vista-img').src = URL.createObjectURL(lista); $('vista-previa').hidden = false;
+}
+function quitarFoto() {
+  fotoLista = null; $('foto').value = ''; $('foto-camara').value = '';
+  $('vista-previa').hidden = true; $('vista-img').removeAttribute('src');
+}
+$('quitar-foto').addEventListener('click', () => { quitarFoto(); $('btn-galeria').focus(); });
 
 // ----- Envío -----
 const msg = $('msg');
@@ -179,7 +217,9 @@ $('form').addEventListener('submit', async (ev) => {
   const boton = $('enviar');
   boton.disabled = true; boton.textContent = 'Enviando...';   // bloqueado mientras se envía
   try {
-    const r = await fetch('/api/reportes', { method: 'POST', body: new FormData(ev.target) });
+    const envio = new FormData(ev.target);
+    if (fotoLista) envio.append('foto', fotoLista, 'foto.jpg');
+    const r = await fetch('/api/reportes', { method: 'POST', body: envio });
     const datos = await r.json();
     if (!datos.ok) { mostrar('error', datos.errores.map(esc).join('<br>')); return; }
     pantallaExito(datos);
